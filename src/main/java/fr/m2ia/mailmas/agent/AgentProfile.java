@@ -4,13 +4,23 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Configuration d'un agent spécialisé, chargée depuis un fichier (config/agents/*.json)
- * et modifiable depuis l'interface : créer un agent = créer un profil, pas une classe.
+ * Configuration d'un agent spécialisé : créer un agent = créer un profil, pas
+ * une classe.
  *
- * @param systemPrompt   texte du system prompt (éditable par l'utilisateur)
- * @param contextSources identifiants de sources de contexte (ex. "file:config/context/supermas/")
+ * <p>
+ * Stockage (géré par AgentRepository) :
+ * <code>config/agents/&lt;id&gt;.json</code> pour la
+ * configuration et <code>config/agents/&lt;id&gt;.md</code> pour le system
+ * prompt, plus simple
+ * à modifier par l'utilisateur. Le repository lit le .md et le place dans
+ * systemPrompt.
+ * </p>
+ *
+ * @param systemPrompt   texte du system prompt
+ * @param contextSources identifiants de sources de contexte (ex.
+ *                       "file:config/context/supermas/")
  * @param routingHints   indices exploités par les stratégies de routing
- * @param fallback       vrai pour l'agent de repli (GenericAgent)
+ * @param fallback       vrai pour l'agent de repli (un seul dans le système)
  */
 public record AgentProfile(
         String id,

@@ -2,12 +2,22 @@
   "id": "research-supermas",
   "name": "SuperMASProject",
   "description": "Échanges liés au projet de recherche SuperMASProject",
-  "systemPrompt": "Tu rédiges des réponses pour le projet SuperMASProject. Réponds de façon concise, rappelle les échéances proches, ne t'engage jamais sur une nouvelle tâche sans validation. Écris en anglais si un partenaire international est en copie.",
-  "contextSources": ["file:config/context/supermas/"],
+  "contextSources": [
+    "file:config/context/supermas/"
+  ],
   "routingHints": {
-    "senderPatterns": ["*@partner-lab.eu"],
-    "senderRoles": ["research-partner"],
-    "keywords": ["SuperMAS", "deliverable", "work package", "WP"]
+    "senderPatterns": [
+      "*@partner-lab.eu"
+    ],
+    "senderRoles": [
+      "research-partner"
+    ],
+    "keywords": [
+      "SuperMAS",
+      "deliverable",
+      "work package",
+      "WP"
+    ]
   },
   "fallback": false
 }

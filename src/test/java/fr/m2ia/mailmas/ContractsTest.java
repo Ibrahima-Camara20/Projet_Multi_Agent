@@ -3,6 +3,8 @@ package fr.m2ia.mailmas;
 import fr.m2ia.mailmas.agent.AgentMessage;
 import fr.m2ia.mailmas.agent.Payload;
 import fr.m2ia.mailmas.agent.Performative;
+import fr.m2ia.mailmas.config.AppConfig;
+import fr.m2ia.mailmas.model.DraftReply;
 import fr.m2ia.mailmas.context.Context;
 import fr.m2ia.mailmas.context.ContextItem;
 import fr.m2ia.mailmas.llm.StubLLMClient;
@@ -48,7 +50,7 @@ class ContractsTest {
     @Test
     void contextRespectsTokenBudget() {
         var ctx = Context.withinBudget(List.of(
-                new ContextItem("a", "x".repeat(400), 0.9),   // ~100 tokens
+                new ContextItem("a", "x".repeat(400), 0.9), // ~100 tokens
                 new ContextItem("b", "y".repeat(400), 0.2)), 150);
         assertEquals(1, ctx.items().size());
         assertEquals("a", ctx.items().get(0).source());
@@ -57,5 +59,20 @@ class ContractsTest {
     @Test
     void stubLlmAnswers() throws Exception {
         assertTrue(new StubLLMClient().generate("sys", "", "Bonjour").startsWith("[STUB]"));
+    }
+
+    @Test
+    void editedReplyKeepsIdentityButChangesBody() {
+        var d = new DraftReply("d1", "e1", "student", "Re: TP", "brouillon", 1, null);
+        var sent = d.withBody("texte corrigé");
+        assertEquals("d1", sent.id());
+        assertEquals("texte corrigé", sent.body());
+    }
+
+    @Test
+    void configHasDefaults() {
+        var c = AppConfig.defaults();
+        assertEquals("http://localhost:11434", c.llmUrl());
+        assertTrue(c.routingThreshold() > 0 && c.routingThreshold() < 1);
     }
 }

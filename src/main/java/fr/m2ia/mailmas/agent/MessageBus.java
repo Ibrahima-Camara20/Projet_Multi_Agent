@@ -12,7 +12,10 @@ public interface MessageBus {
 
     void unregister(String agentId);
 
-    /** Envoie un message et renvoie la réponse du destinataire (communication synchrone). */
+    /**
+     * Envoie un message et renvoie la réponse du destinataire (communication synchrone).
+     * Si le destinataire est inconnu, renvoie un message FAILURE au lieu de lever une exception.
+     */
     AgentMessage send(AgentMessage message);
 
     Collection<AgentProfile> registeredAgents();
