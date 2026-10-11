@@ -1,0 +1,12 @@
+{
+  "id": "005",
+  "threadId": "stage-supermas",
+  "from": "marc.petit@univ.fr",
+  "to": [
+    "moi@univ.fr"
+  ],
+  "subject": "Stage et SuperMAS",
+  "body": "Bonjour, un de mes étudiants cherche un stage : est-ce qu'il pourrait travailler sur un deliverable du projet SuperMAS ? Il faudrait en parler à la prochaine réunion. Marc",
+  "receivedAt": "2026-10-06T14:00:00Z",
+  "metadata": {}
+}
