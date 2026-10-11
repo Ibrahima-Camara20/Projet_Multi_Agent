@@ -1,0 +1,12 @@
+{
+  "id": "003",
+  "threadId": "jury-s1",
+  "from": "paul.durand@univ.fr",
+  "to": [
+    "moi@univ.fr"
+  ],
+  "subject": "Jury du semestre 1",
+  "body": "Salut, on cale la réunion du jury de S1 ? Je propose jeudi 14h. Il faudra aussi se répartir les copies du partiel. Paul",
+  "receivedAt": "2026-10-05T09:00:00Z",
+  "metadata": {}
+}

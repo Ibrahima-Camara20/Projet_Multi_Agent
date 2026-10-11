@@ -1,0 +1,12 @@
+{
+  "id": "006",
+  "threadId": "newsletter",
+  "from": "contact@librairie-exemple.fr",
+  "to": [
+    "moi@univ.fr"
+  ],
+  "subject": "Votre commande",
+  "body": "Bonjour, votre commande est disponible en magasin. Souhaitez-vous qu'on vous la mette de côté jusqu'à samedi ?",
+  "receivedAt": "2026-10-07T11:00:00Z",
+  "metadata": {}
+}

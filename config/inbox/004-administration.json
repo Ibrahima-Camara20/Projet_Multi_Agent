@@ -1,0 +1,12 @@
+{
+  "id": "004",
+  "threadId": "mission-lyon",
+  "from": "scolarite@univ.fr",
+  "to": [
+    "moi@univ.fr"
+  ],
+  "subject": "Ordre de mission - colloque Lyon",
+  "body": "Madame, votre ordre de mission pour le colloque de Lyon est incomplet : merci de nous transmettre le formulaire signé et les pièces justificatives pour le remboursement. Le service scolarité",
+  "receivedAt": "2026-10-06T10:15:00Z",
+  "metadata": {}
+}
