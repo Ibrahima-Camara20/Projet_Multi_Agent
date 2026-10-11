@@ -1,0 +1,12 @@
+{
+  "id": "generic",
+  "name": "Généraliste",
+  "description": "Agent de repli : e-mails qui ne correspondent à aucune catégorie",
+  "contextSources": [],
+  "routingHints": {
+    "senderPatterns": [],
+    "senderRoles": [],
+    "keywords": []
+  },
+  "fallback": true
+}

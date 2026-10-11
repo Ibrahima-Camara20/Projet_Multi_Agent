@@ -1,0 +1,33 @@
+{
+  "id": "teacher",
+  "name": "Collègues enseignants",
+  "description": "Échanges avec les collègues enseignants : enseignements, jurys, réunions, copies, emplois du temps",
+  "contextSources": [
+    "file:config/context/teacher/"
+  ],
+  "routingHints": {
+    "senderPatterns": [
+      "*@univ.fr"
+    ],
+    "senderRoles": [
+      "teacher",
+      "colleague"
+    ],
+    "keywords": [
+      "réunion",
+      "jury",
+      "enseignement",
+      "maquette",
+      "emploi du temps",
+      "copies",
+      "sujet d'examen",
+      "conseil pédagogique",
+      "séminaire",
+      "co-encadrement",
+      "responsable de module",
+      "vacataire",
+      "surveillance"
+    ]
+  },
+  "fallback": false
+}
