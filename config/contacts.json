@@ -1,0 +1,32 @@
+[
+  {
+    "email": "anna.muller@partner-lab.eu",
+    "name": "Anna Müller",
+    "roles": ["research-partner"]
+  },
+  {
+    "email": "lea.martin@etu.univ.fr",
+    "name": "Léa Martin",
+    "roles": ["student"]
+  },
+  {
+    "email": "marc.petit@univ.fr",
+    "name": "Marc Petit",
+    "roles": ["teacher"]
+  },
+  {
+    "email": "marco.rossi@ai-lab.it",
+    "name": "Marco Rossi",
+    "roles": ["research-partner"]
+  },
+  {
+    "email": "paul.durand@univ.fr",
+    "name": "Paul Durand",
+    "roles": ["teacher"]
+  },
+  {
+    "email": "scolarite@univ.fr",
+    "name": "Service scolarité",
+    "roles": ["administration"]
+  }
+]
