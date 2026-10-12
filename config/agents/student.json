@@ -1,0 +1,35 @@
+{
+  "id": "student",
+  "name": "Étudiants",
+  "description": "Questions des étudiants : cours, TP, examens, notes, projets, stages",
+  "contextSources": [
+    "file:config/context/student/"
+  ],
+  "routingHints": {
+    "senderPatterns": [
+      "*@etu.univ.fr"
+    ],
+    "senderRoles": [
+      "student"
+    ],
+    "keywords": [
+      "cours",
+      "TP",
+      "TD",
+      "examen",
+      "partiel",
+      "notes",
+      "rendu",
+      "devoir",
+      "exercice",
+      "soutenance",
+      "stage",
+      "rattrapage",
+      "absence",
+      "moodle",
+      "cours magistral",
+      "projet tutoré"
+    ]
+  },
+  "fallback": false
+}

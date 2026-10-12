@@ -1,0 +1,35 @@
+{
+  "id": "administration",
+  "name": "Administration",
+  "description": "Échanges administratifs : scolarité, ressources humaines, missions, remboursements, formulaires",
+  "contextSources": [
+    "file:config/context/administration/"
+  ],
+  "routingHints": {
+    "senderPatterns": [
+      "scolarite@univ.fr",
+      "rh@univ.fr",
+      "*@admin.univ.fr"
+    ],
+    "senderRoles": [
+      "administration"
+    ],
+    "keywords": [
+      "inscription",
+      "attestation",
+      "formulaire",
+      "ordre de mission",
+      "remboursement",
+      "note de frais",
+      "contrat",
+      "signature",
+      "scolarité",
+      "congé",
+      "heures complémentaires",
+      "service fait",
+      "pièce justificative",
+      "dossier administratif"
+    ]
+  },
+  "fallback": false
+}

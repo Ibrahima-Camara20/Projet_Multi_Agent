@@ -1,0 +1,12 @@
+{
+  "id": "002",
+  "threadId": "tp3-rendu",
+  "from": "lea.martin@etu.univ.fr",
+  "to": [
+    "moi@univ.fr"
+  ],
+  "subject": "Question sur le rendu du TP3",
+  "body": "Bonjour Madame, je n'ai pas compris si le rendu du TP3 doit inclure le rapport ou seulement le code. Pouvez-vous préciser ? Merci, Léa",
+  "receivedAt": "2026-10-05T08:30:00Z",
+  "metadata": {}
+}
