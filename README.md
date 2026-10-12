@@ -50,3 +50,6 @@ UI -> AssistantService.submit(email) -> RoutingAgent -> RoutingStrategy -> Messa
 | 11  | Réponse modifiée puis validée           | `DraftReply.withBody()` : on enregistre le texte réellement envoyé                        | Mémoire fidèle                                                             |
 | 12  | Appels bloquants                        | L'UI appelle le service dans un thread d'arrière-plan                                     | Interface fluide                                                           |
 | 13  | Configuration                           | `config/app.properties` lu par `AppConfig`                                                | Changer de modèle sans recompiler                                          |
+
+
+.\mvnw.cmd clean test
