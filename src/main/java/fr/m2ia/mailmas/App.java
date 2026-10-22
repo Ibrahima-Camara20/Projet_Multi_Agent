@@ -7,6 +7,9 @@ import fr.m2ia.mailmas.config.AppConfig;
 import fr.m2ia.mailmas.llm.LLMClient;
 import fr.m2ia.mailmas.llm.OllamaLLMClient;
 import fr.m2ia.mailmas.llm.StubLLMClient;
+import fr.m2ia.mailmas.memory.ConversationMemory;
+import fr.m2ia.mailmas.memory.FileConversationMemory;
+import fr.m2ia.mailmas.memory.InMemoryConversationMemory;
 import fr.m2ia.mailmas.model.Email;
 import fr.m2ia.mailmas.routing.RoutingDecision;
 
@@ -25,6 +28,8 @@ import java.util.stream.Collectors;
 /**
  * Démonstrateur en console : fait passer les e-mails de config/inbox dans tout le système.
  *
+ *   App --reset         efface l'historique enregistré (data/conversations) avant de commencer
+ *   App --fresh         n'utilise pas l'historique enregistré (mémoire temporaire, rien n'est écrit)
  * <pre>
  *   App                 tous les e-mails, avec Ollama
  *   App 001 005         seulement ces e-mails
@@ -52,10 +57,22 @@ public final class App {
             llm = OllamaLLMClient.from(config);
         }
 
-        MailAssistant assistant = MailAssistant.create(config, llm, !stub);
+        boolean fresh = Arrays.asList(args).contains("--fresh");
+        ConversationMemory memory;
+        if (fresh) {
+            memory = new InMemoryConversationMemory();
+        } else {
+            FileConversationMemory fileMemory = FileConversationMemory.from(config);
+            if (Arrays.asList(args).contains("--reset")) {
+                fileMemory.clear();
+            }
+            memory = fileMemory;
+        }
+        MailAssistant assistant = MailAssistant.create(config, llm, !stub, memory);
         assistant.bus().addListener(App::printMessage);
 
         System.out.println("Modèle : " + llm.modelName() + "   |   routing : " + assistant.router().strategy().name());
+        System.out.println("Mémoire : " + (fresh ? "temporaire (--fresh)" : "data/conversations"));
         System.out.println("Agents : " + assistant.agents().findAll().stream()
                 .map(p -> p.id() + (p.fallback() ? " (repli)" : "")).collect(Collectors.joining(", ")));
 
