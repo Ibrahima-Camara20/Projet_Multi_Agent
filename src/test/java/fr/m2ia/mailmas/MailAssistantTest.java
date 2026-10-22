@@ -3,6 +3,7 @@ package fr.m2ia.mailmas;
 import fr.m2ia.mailmas.app.ProcessingResult;
 import fr.m2ia.mailmas.config.AppConfig;
 import fr.m2ia.mailmas.llm.StubLLMClient;
+import fr.m2ia.mailmas.memory.InMemoryConversationMemory;
 import fr.m2ia.mailmas.model.Email;
 import fr.m2ia.mailmas.model.UserFeedback;
 import org.junit.jupiter.api.Test;
@@ -24,7 +25,8 @@ import static org.junit.jupiter.api.Assertions.*;
 class MailAssistantTest {
 
     private static MailAssistant assistant() throws Exception {
-        return MailAssistant.create(AppConfig.load(Path.of("config/app.properties")), new StubLLMClient(), false);
+        return MailAssistant.create(AppConfig.load(Path.of("config/app.properties")), new StubLLMClient(), false,
+                new InMemoryConversationMemory()); // mémoire temporaire : rien n'est écrit sur disque
     }
 
     @Test
