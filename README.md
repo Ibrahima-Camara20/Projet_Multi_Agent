@@ -262,7 +262,18 @@ l'affinité de fil (e-mail 001 : 0,97 → 0,98).
 | v1 : règles communes + consignes de l'agent | Bonne date avec contexte ; mais fuite de notes internes et refus |
 | v2 : « ni accepter ni refuser », « notes internes » | Plus de refus ; la fuite persiste |
 | v3 : faits seulement dans le contexte | Plus de fuite ; réponse neutre sur l'engagement |
-| v4 : langue de l'e-mail, prudence élargie | 005 en français ; mais sur-correction : la date disparaît pour 001 |
+| v4 : langue### Agents étudiant, collègues, administration (e-mails 002 à 004, avec contexte)
+
+| E-mail | Premier essai | Problème | Correction | Résultat |
+|---|---|---|---|---|
+| 002 (TP3) | Correct : code + rapport de 4 pages, Moodle | — | — | Correct |
+| 003 (jury) | « Je ne peux pas confirmer » malgré un jeudi après-midi libre | Règle « pas de nouvelle charge » généralisée à la réunion ; « 14h = après-midi » non déduit | Consigne positive sur les créneaux ; disponibilités écrites heure par heure | Créneau accepté, copies traitées |
+| 004 (mission) | Références et pièces manquantes exactes, mais « pièces en règle » inventé | Puis « ci-joint le formulaire signé » : la consigne de l'agent parlait de « pièces jointes » | Consigne réécrite avec une phrase modèle ; règle commune « n'affirme jamais avoir joint ou signé » | Pièces annoncées au futur |
+
+Enseignements : un petit modèle ne fait pas de déduction sur le contexte. Il faut écrire les faits sous
+la forme exacte utile (« libre à 14h »), et une phrase modèle est mieux suivie qu'une interdiction.
+Une même configuration peut donner une réponse correcte puis une invention : chaque cas est évalué sur
+plusieurs essais. de l'e-mail, prudence élargie | 005 en français ; mais sur-correction : la date disparaît pour 001 |
 | v5 : consigne positive pour les faits, prudence limitée aux engagements | 001 correct ; 005 reprend encore une proposition de l'expéditeur (« comme convenu ») |
 
 Temps : de 8 s (prompt minimal) à 35-50 s (contexte complet, ou départage par LLM). Un contexte
