@@ -388,7 +388,7 @@ final class AgentsPane extends HBox {
         message.getStyleClass().setAll("label", "small", "success-text");
     }
 
-    /** Une ligne de la liste : identifiant, repli, description. */
+    /** Une ligne de la liste : nom, identifiant, repli, description. */
     private static final class Cell extends ListCell<AgentProfile> {
         @Override
         protected void updateItem(AgentProfile p, boolean empty) {
@@ -398,13 +398,16 @@ final class AgentsPane extends HBox {
                 setText(null);
                 return;
             }
-            HBox top = new HBox(8, Ui.mono(Ui.label(p.id(), "strong")));
+            HBox top = new HBox(8, Ui.label(p.name(), "strong"));
             top.setAlignment(Pos.CENTER_LEFT);
+            if (!p.name().equals(p.id())) {
+                top.getChildren().add(Ui.mono(Ui.label(p.id(), "muted", "small")));
+            }
             if (p.fallback()) {
                 top.getChildren().add(Ui.label("repli", "badge"));
             }
             int keywords = p.routingHints().keywords().size();
-            Label detail = Ui.text(p.description().isBlank() ? p.name() : p.description(), "muted", "small");
+            Label detail = Ui.text(p.description(), "muted", "small");
             Label stats = Ui.label(keywords + " mot" + (keywords > 1 ? "s" : "") + "-clé"
                     + (keywords > 1 ? "s" : ""), "muted", "small");
             VBox box = new VBox(3, top, detail, stats);
