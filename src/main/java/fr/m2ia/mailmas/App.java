@@ -26,10 +26,14 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Démonstrateur en console : fait passer les e-mails de config/inbox dans tout le système.
+ * Démonstrateur en console : fait passer les e-mails de config/inbox dans tout
+ * le système.
  *
- *   App --reset         efface l'historique enregistré (data/conversations) avant de commencer
- *   App --fresh         n'utilise pas l'historique enregistré (mémoire temporaire, rien n'est écrit)
+ * App --reset efface l'historique enregistré (data/conversations) avant de
+ * commencer
+ * App --fresh n'utilise pas l'historique enregistré (mémoire temporaire, rien
+ * n'est écrit)
+ * 
  * <pre>
  *   App                 tous les e-mails, avec Ollama
  *   App 001 005         seulement ces e-mails
@@ -124,7 +128,8 @@ public final class App {
         System.out.println("   [bus] " + m.performative() + " " + m.sender() + " -> " + m.receiver() + detail);
     }
 
-    private static boolean ollamaIsRunning(String baseUrl) {
+    /** Vrai si Ollama répond (utilisé aussi par l'interface graphique). */
+    public static boolean ollamaIsRunning(String baseUrl) {
         try {
             HttpResponse<Void> r = HttpClient.newHttpClient().send(
                     HttpRequest.newBuilder(URI.create(baseUrl.replaceAll("/+$", "") + "/api/tags"))

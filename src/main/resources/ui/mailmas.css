@@ -1,0 +1,482 @@
+/*
+ * Mail MAS : feuille de style de l'interface (reprend le design validé sur Claude Design).
+ * Fond gris froid, panneaux blancs, filets fins, un seul accent bleu encre (#2B4C7E),
+ * ambre réservé à l'ambiguïté. Pas d'ombres ni de dégradés.
+ */
+
+.root {
+    -fx-font-size: 14px;
+    -fx-background-color: #F5F6F7;
+    -fx-focus-color: #2B4C7E;
+    -fx-faint-focus-color: transparent;
+}
+
+.label {
+    -fx-text-fill: #16191D;
+}
+
+.muted {
+    -fx-text-fill: #59616B;
+}
+
+.small {
+    -fx-font-size: 12px;
+}
+
+.strong {
+    -fx-font-weight: bold;
+}
+
+.title {
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+}
+
+.h2 {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+}
+
+.section-title {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #59616B;
+}
+
+.agent-id {
+    -fx-text-fill: #2B4C7E;
+    -fx-font-size: 12px;
+}
+
+.reason {
+    -fx-font-size: 12px;
+    -fx-text-fill: #3D444C;
+}
+
+.note {
+    -fx-font-size: 12px;
+    -fx-text-fill: #3D444C;
+    -fx-padding: 8 0 0 0;
+}
+
+/* ---------- en-tête ---------- */
+
+.header {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: transparent transparent #D9DDE2 transparent;
+    -fx-padding: 0 24;
+    -fx-min-height: 52;
+}
+
+.wordmark {
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+}
+
+.dot-ok {
+    -fx-fill: #2F7D4F;
+}
+
+.dot-warn {
+    -fx-fill: #C98A1E;
+}
+
+.dot-bad {
+    -fx-fill: #B3261E;
+}
+
+/* ---------- boîte de réception ---------- */
+
+.panel-left {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: transparent #D9DDE2 transparent transparent;
+}
+
+.pane-header {
+    -fx-padding: 16 20 12 20;
+}
+
+.inbox {
+    -fx-background-color: #FFFFFF;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+    -fx-border-width: 0;
+}
+
+.inbox .list-cell {
+    -fx-background-color: #FFFFFF;
+    -fx-padding: 14 20;
+    -fx-border-color: #E4E7EB transparent transparent transparent;
+}
+
+.inbox .list-cell:empty {
+    -fx-border-color: transparent;
+}
+
+.inbox .list-cell:filled:hover {
+    -fx-background-color: #F0F2F5;
+}
+
+.inbox .list-cell:filled:selected,
+.inbox:focused .list-cell:filled:selected {
+    -fx-background-color: #E8EDF4;
+}
+
+.inbox .list-cell:selected .label {
+    -fx-text-fill: #16191D;
+}
+
+.inbox .list-cell:selected .muted {
+    -fx-text-fill: #59616B;
+}
+
+.inbox .list-cell:selected .agent-id {
+    -fx-text-fill: #2B4C7E;
+}
+
+.badge-ambiguous {
+    -fx-background-color: #FFF4DB;
+    -fx-border-color: #C98A1E;
+    -fx-border-radius: 3;
+    -fx-background-radius: 3;
+    -fx-padding: 0 6;
+    -fx-font-size: 12px;
+    -fx-text-fill: #6B4500;
+}
+
+.inbox .list-cell:selected .badge-ambiguous {
+    -fx-text-fill: #6B4500;
+}
+
+/* ---------- colonne centrale ---------- */
+
+.center,
+.center>.viewport,
+.panel-right>.viewport {
+    -fx-background-color: transparent;
+}
+
+.center {
+    -fx-background-color: #F5F6F7;
+    -fx-padding: 0;
+}
+
+.email-pane {
+    -fx-padding: 28 36 36 36;
+}
+
+.email-body {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #D9DDE2;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-padding: 20 24;
+}
+
+.text-area {
+    -fx-background-color: #9AA3AE, #FFFFFF;
+    -fx-background-insets: 0, 1;
+    -fx-background-radius: 6, 5;
+    -fx-text-fill: #16191D;
+}
+
+.text-area:focused {
+    -fx-background-color: #2B4C7E, #FFFFFF;
+    -fx-background-insets: 0, 2;
+}
+
+.text-area .content {
+    -fx-background-color: #FFFFFF;
+    -fx-padding: 10 12;
+}
+
+.text-area .scroll-pane {
+    -fx-background-color: transparent;
+}
+
+.draft {
+    -fx-font-size: 14px;
+}
+
+.button,
+.menu-button {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #C5CBD3;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+    -fx-padding: 10 16;
+    -fx-min-height: 44;
+    -fx-text-fill: #16191D;
+    -fx-cursor: hand;
+}
+
+.button:hover,
+.menu-button:hover {
+    -fx-background-color: #F0F2F5;
+}
+
+.button:focused,
+.menu-button:focused {
+    -fx-border-color: #2B4C7E;
+    -fx-border-width: 2;
+    -fx-padding: 9 15;
+}
+
+.button.primary {
+    -fx-background-color: #2B4C7E;
+    -fx-border-color: #2B4C7E;
+    -fx-text-fill: #FFFFFF;
+    -fx-font-weight: bold;
+}
+
+.button.primary:hover {
+    -fx-background-color: #1A3358;
+}
+
+.button.primary:focused {
+    -fx-border-color: #16191D;
+}
+
+.menu-button {
+    -fx-padding: 0;
+}
+
+.menu-button>.label {
+    -fx-padding: 10 8 10 16;
+    -fx-text-fill: #16191D;
+}
+
+.menu-button>.arrow-button {
+    -fx-padding: 0 16 0 0;
+}
+
+.menu-button>.arrow-button>.arrow {
+    -fx-background-color: #59616B;
+}
+
+.menu-button:focused {
+    -fx-padding: -1;
+}
+
+/* onglets de l'en-tête (après .button pour l'emporter) */
+.button.nav,
+.button.nav-active {
+    -fx-background-color: transparent;
+    -fx-background-radius: 0;
+    -fx-border-color: transparent;
+    -fx-border-width: 0 0 2 0;
+    -fx-border-radius: 0;
+    -fx-padding: 15 12 13 12;
+    -fx-text-fill: #59616B;
+}
+
+.button.nav-active {
+    -fx-text-fill: #16191D;
+    -fx-font-weight: bold;
+    -fx-border-color: transparent transparent #2B4C7E transparent;
+}
+
+.button.nav-active:focused {
+    -fx-border-width: 0 0 2 0;
+    -fx-padding: 15 12 13 12;
+}
+
+.button.nav:disabled {
+    -fx-opacity: 0.6;
+}
+
+.small-button {
+    -fx-font-size: 12px;
+    -fx-padding: 6 10;
+    -fx-min-height: 32;
+}
+
+.banner-ambiguous {
+    -fx-background-color: #FFF4DB;
+    -fx-border-color: #C98A1E;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-padding: 14 18;
+}
+
+.banner-ambiguous .label {
+    -fx-text-fill: #4A3000;
+}
+
+.banner-button {
+    -fx-border-color: #C98A1E;
+    -fx-text-fill: #4A3000;
+}
+
+.reject-panel {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #16191D;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-padding: 18;
+}
+
+.error-box {
+    -fx-background-color: #FDECEC;
+    -fx-border-color: #B3261E;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-padding: 16 18;
+}
+
+.error-box .label {
+    -fx-text-fill: #5C1410;
+}
+
+/* ---------- colonne de droite ---------- */
+
+.panel-right {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: transparent transparent transparent #D9DDE2;
+    -fx-padding: 0;
+}
+
+.explain {
+    -fx-padding: 24 22;
+    -fx-background-color: #FFFFFF;
+}
+
+.score-track {
+    -fx-background-color: #E4E7EB;
+    -fx-background-radius: 3;
+}
+
+.score-fill {
+    -fx-background-radius: 3;
+}
+
+.score-fill.chosen {
+    -fx-background-color: #2B4C7E;
+}
+
+.score-fill.second {
+    -fx-background-color: #8C98A8;
+}
+
+.score-fill.other {
+    -fx-background-color: #C5CBD3;
+}
+
+.score-tick {
+    -fx-background-color: #59616B;
+}
+
+.context-table {
+    -fx-hgap: 12;
+    -fx-vgap: 6;
+}
+
+.journal {
+    -fx-background-color: #F5F6F7;
+    -fx-border-color: #E4E7EB;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+    -fx-padding: 10 12;
+}
+
+.journal-line {
+    -fx-font-size: 12px;
+}
+
+.scroll-bar {
+    -fx-background-color: transparent;
+}
+
+.scroll-bar .thumb {
+    -fx-background-color: #C5CBD3;
+    -fx-background-radius: 4;
+}
+
+.scroll-bar .increment-button,
+.scroll-bar .decrement-button {
+    -fx-padding: 0;
+}
+
+.scroll-bar .increment-arrow,
+.scroll-bar .decrement-arrow {
+    -fx-shape: " ";
+    -fx-padding: 0;
+}
+
+/* ---------- formulaires (écrans Agents et Contacts) ---------- */
+
+.form-label {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #3D444C;
+}
+
+.text-field {
+    -fx-background-color: #9AA3AE, #FFFFFF;
+    -fx-background-insets: 0, 1;
+    -fx-background-radius: 4, 3;
+    -fx-padding: 10 12;
+    -fx-min-height: 44;
+    -fx-text-fill: #16191D;
+}
+
+.text-field:focused {
+    -fx-background-color: #2B4C7E, #FFFFFF;
+    -fx-background-insets: 0, 2;
+}
+
+.text-field:readonly {
+    -fx-background-color: #D9DDE2, #F5F6F7;
+    -fx-text-fill: #3D444C;
+}
+
+.check-box {
+    -fx-text-fill: #16191D;
+    -fx-padding: 4 0;
+}
+
+.check-box>.box {
+    -fx-background-color: #9AA3AE, #FFFFFF;
+    -fx-background-insets: 0, 1;
+    -fx-background-radius: 3, 2;
+    -fx-padding: 3;
+}
+
+.check-box:selected>.box {
+    -fx-background-color: #2B4C7E, #2B4C7E;
+}
+
+.check-box:selected>.box>.mark {
+    -fx-background-color: #FFFFFF;
+}
+
+.check-box:focused>.box {
+    -fx-background-color: #2B4C7E, #FFFFFF;
+    -fx-background-insets: 0, 2;
+}
+
+.check-box:focused:selected>.box {
+    -fx-background-color: #16191D, #2B4C7E;
+}
+
+.badge {
+    -fx-border-color: #9AA3AE;
+    -fx-border-radius: 3;
+    -fx-padding: 0 6;
+    -fx-font-size: 11px;
+    -fx-text-fill: #3D444C;
+}
+
+.error-text {
+    -fx-text-fill: #B3261E;
+    -fx-font-weight: bold;
+}
+
+.success-text {
+    -fx-text-fill: #2F7D4F;
+    -fx-font-weight: bold;
+}
+
+.file-table {
+    -fx-padding: 4 0;
+}
