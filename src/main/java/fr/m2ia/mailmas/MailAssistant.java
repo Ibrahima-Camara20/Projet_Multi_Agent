@@ -51,7 +51,8 @@ public record MailAssistant(
                 JsonInbox inbox,
                 JsonAgentRepository agents,
                 JsonContactDirectory contacts,
-                ConversationMemory memory) {
+                ConversationMemory memory,
+                ContextProvider context) {
 
             /**
      * Système complet, avec la mémoire des conversations conservée sur disque (data/conversations/).
@@ -92,6 +93,6 @@ public record MailAssistant(
                 DefaultAssistantService service = new DefaultAssistantService(bus, router, agents,
                                 new DefaultAgentFactory(generator), memory);
 
-                return new MailAssistant(config, service, bus, router, inbox, agents, contacts, memory);
+                        return new MailAssistant(config, service, bus, router, inbox, agents, contacts, memory, context);
         }
 }
