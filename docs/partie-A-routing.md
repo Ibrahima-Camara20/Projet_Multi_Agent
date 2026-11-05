@@ -175,7 +175,67 @@ Le test est ignoré dans un `mvnw test` ordinaire. Les tableaux (agent choisi pa
 synthèse, cas sensibles du refus, réponses brutes du modèle) sont affichés et enregistrés dans
 `target/experiences-routing-<modèle>.md`.
 
-*Résultats : à compléter après exécution.*
+### Résultats (`qwen3.5:4b`, réflexion désactivée, température 0, processeur)
+
+| Configuration | Exactitude | Appels au modèle | Temps ajouté (21 e-mails) | Par e-mail (moy. / pire) |
+|---|---|---|---|---|
+| Pondérée (référence) | 19/21 (90 %) | 0 | 0 s | 0 s |
+| LLM seul | 18/21 (86 %) | 21 | 124,0 s | 5,9 s / 7,5 s |
+| Pondérée + départage LLM | 19/21 (90 %) | 0 | 0 s | 0 s |
+| Pondérée + refus par mots-clés | 16/21 (76 %) | 0 | 0 s | 0 s |
+| Pondérée + refus par LLM | 16/21 (76 %) | 19 | 91,1 s | 4,3 s / 5,8 s |
+
+Erreurs par configuration :
+
+| id | attendu | pondérée | LLM seul | refus mots-clés | refus LLM |
+|---|---|---|---|---|---|
+| r2 « Meeting next week » (partenaire) | research-supermas | ✓ | ✓ | ✓ | ✗ generic |
+| s5 « la salle a changé ? » | student | ✓ | ✓ | ✗ generic | ✓ |
+| t4 « café pour parler du module ? » | teacher | ✓ | ✓ | ✗ generic | ✓ |
+| r4 « Travel arrangements » (partenaire) | research-supermas | ✓ | ✗ generic | ✗ generic | ✗ generic |
+| a4 la scolarité parle d'examen | administration | ✗ student | ✗ student | ✗ student | ✗ student |
+| m1 digest de la liste `supermas-wp3` | research-supermas | ✓ | ✗ generic | ✗ generic | ✗ generic |
+| g3 étudiante qui vend son vélo | generic | ✗ student | ✓ | ✓ | ✗ student |
+
+### Analyse
+
+**1. Le LLM seul ne fait pas mieux que la combinaison pondérée (86 % contre 90 %).** Ses erreurs
+sont différentes, ce qui est instructif. Il ne voit que le texte : il ignore qui est l'expéditeur
+(r4, message d'une partenaire connue sans vocabulaire du projet) et les métadonnées (m1, digest
+dont seul l'en-tête `list-id` indique le projet). En revanche, il comprend le sens et reconnaît
+que la vente d'un vélo ne relève d'aucun agent (g3), ce que les règles ne savent pas faire. Les
+deux approches sont donc complémentaires : les règles exploitent la connaissance du contexte
+(annuaire, métadonnées), le LLM la compréhension du contenu. Le cas a4 (la scolarité demande un
+sujet d'examen) piège les deux : le vocabulaire est celui des étudiants, seul le rôle de
+l'expéditeur indique l'administration.
+
+**2. L'auto-évaluation par le LLM ne fait pas mieux que le refus par mots-clés (76 % dans les deux
+cas).** Elle corrige bien s5 et t4, que les mots-clés refusaient à tort, mais :
+- elle ne corrige pas r4 (même raison qu'au point 1 : le LLM ne connaît pas l'expéditrice) ;
+- elle refuse à tort r2 et m1 ;
+- elle ne refuse pas g3 : interrogé sur un seul agent (« cet e-mail relève-t-il de l'agent
+  student ? »), le modèle répond oui à une étudiante qui vend un vélo, alors qu'il répondait
+  « aucun » quand il voyait tous les agents (LLM seul). Poser la question pour un agent isolé
+  biaise la réponse vers l'acceptation.
+Le refus reste donc désactivé dans la configuration retenue (`new DefaultAgentFactory(generator)`).
+
+**3. Coût en temps.** Chaque appel de routing coûte 4 à 6 s en moyenne (7,5 s au pire) sur
+processeur avec `qwen3.5:4b`, contre un temps négligeable pour les règles. Sur les 21 e-mails, le
+LLM seul ajoute 2 minutes, l'auto-évaluation 1 min 30. C'est du même ordre que la rédaction
+elle-même ; appeler le LLM pour chaque e-mail doublerait presque le temps d'attente.
+
+**4. Configuration retenue : combinaison pondérée, LLM seulement pour départager.** Elle garde la
+meilleure exactitude (90 %) et n'appelle le modèle que pour les cas ambigus. Sur ces 21 e-mails,
+aucun n'était assez ambigu pour déclencher le départage (0 appel) ; il intervient par exemple sur
+l'e-mail 005 de la boîte de démonstration (« Stage et SuperMAS »).
+
+**Pistes.** Donner au LLM ce que les règles savent déjà (rôle connu de l'expéditeur, liste de
+diffusion) corrigerait vraisemblablement r4 et m1 ; lui présenter tous les agents plutôt qu'un seul
+pour l'auto-évaluation éviterait le biais d'acceptation de g3.
+
+**Limites.** 21 e-mails écrits par nous, une seule exécution, un seul modèle : ces chiffres
+indiquent des tendances, pas des performances générales. Ils sont à refaire avec un modèle plus
+grand (`-Dmodel=qwen3.5:9b`) si le temps le permet.
 
 ## 6. Organisation Git
 
