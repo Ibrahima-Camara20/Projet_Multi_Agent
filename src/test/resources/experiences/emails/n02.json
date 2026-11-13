@@ -1,0 +1,12 @@
+{
+  "id": "n02",
+  "threadId": "n02",
+  "from": "lukas.weber@etu.univ.fr",
+  "to": [
+    "moi@univ.fr"
+  ],
+  "subject": "Question about the final project",
+  "body": "Hello,\n\nI am an Erasmus student in your multi-agent systems course. For the final project, is it possible to use Python instead of Java? And when is the deadline?\n\nThank you,\nLukas Weber",
+  "receivedAt": "2026-10-08T14:20:00Z",
+  "metadata": {}
+}

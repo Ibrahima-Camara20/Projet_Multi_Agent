@@ -103,6 +103,8 @@ public final class App {
                 System.out.println("\n--- Proposition : " + result.draft().subject() + " ---");
                 System.out.println(result.draft().body());
             }
+            assistant.service().currentReview(email.id()).forEach(f ->
+                    System.out.println("   [critique] " + f.severity() + " " + f.code() + " : " + f.message()));
         }
         System.out.println("\n" + emails.size() + " e-mail(s) traité(s).");
     }
@@ -124,6 +126,9 @@ public final class App {
             case Payload.Failure f -> " : " + f.reason();
             case Payload.DraftRequest r -> " (proposition n°" + r.attempt() + ")";
             case Payload.DraftProposal p -> "";
+            case Payload.ReviewRequest r -> " (relecture de la proposition n°" + r.draft().attempt() + ")";
+            case Payload.ReviewReport r -> r.findings().isEmpty() ? " : rien à signaler"
+                    : " : " + String.join(", ", r.findings().stream().map(f -> f.code()).toList());
         };
         System.out.println("   [bus] " + m.performative() + " " + m.sender() + " -> " + m.receiver() + detail);
     }

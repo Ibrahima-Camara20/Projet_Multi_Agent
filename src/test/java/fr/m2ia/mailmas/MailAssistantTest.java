@@ -25,8 +25,10 @@ import static org.junit.jupiter.api.Assertions.*;
 class MailAssistantTest {
 
     private static MailAssistant assistant() throws Exception {
+        // mémoire temporaire : rien n'est écrit sur disque ; sans agent critique, qui réécrirait les
+        // réponses factices du StubLLMClient (testé à part dans CriticInTheSystemTest)
         return MailAssistant.create(AppConfig.load(Path.of("config/app.properties")), new StubLLMClient(), false,
-                new InMemoryConversationMemory()); // mémoire temporaire : rien n'est écrit sur disque
+                new InMemoryConversationMemory(), false);
     }
 
     @Test

@@ -5,5 +5,6 @@ public enum Performative {
     REQUEST, // demander à un agent de produire une réponse
     PROPOSE, // renvoyer une proposition de réponse
     REFUSE, // l'agent ne se juge pas compétent
-    FAILURE // erreur pendant le traitement (LLM indisponible, agent inconnu...)
+    FAILURE, // erreur pendant le traitement (LLM indisponible, agent inconnu...)
+    INFORM // communiquer un résultat (rapport de relecture de l'agent critique)
 }

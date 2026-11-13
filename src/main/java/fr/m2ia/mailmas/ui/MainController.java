@@ -12,6 +12,7 @@ import fr.m2ia.mailmas.model.Contact;
 import fr.m2ia.mailmas.model.DraftReply;
 import fr.m2ia.mailmas.model.Email;
 import fr.m2ia.mailmas.model.UserFeedback;
+import fr.m2ia.mailmas.persistence.JsonInbox;
 import fr.m2ia.mailmas.routing.TextMatching;
 import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
@@ -19,11 +20,16 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
+import java.io.File;
+import java.nio.file.Path;
+import java.time.Instant;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
@@ -94,6 +100,43 @@ final class MainController {
         items.setAll(fresh);
     }
 
+    /** Formulaire « Nouvel e-mail » : enregistre l'e-mail dans data/inbox et relit la boîte. */
+    Email addEmail(String from, String subject, String body, Email replyTo) {
+        JsonInbox user = assistant.userInbox();
+        String id = user.newId();
+        String thread = replyTo != null ? replyTo.threadId() : id;
+        Email email = new Email(id, thread, from.toLowerCase(Locale.ROOT), List.of(), subject, body,
+                Instant.now().truncatedTo(ChronoUnit.SECONDS), Map.of());
+        user.save(email);
+        loadInbox();
+        return email;
+    }
+
+    /** Import de fichiers .eml ou .json dans data/inbox ; renvoie les fichiers refusés et pourquoi. */
+    List<String> importFiles(List<File> files) {
+        List<String> problems = new ArrayList<>();
+        for (File f : files) {
+            Path path = f.toPath();
+            try {
+                if (f.getName().toLowerCase(Locale.ROOT).endsWith(".json")) {
+                    Email e = assistant.userInbox().readFile(path);
+                    if (assistant.inbox().findById(e.id()).isPresent()) {
+                        problems.add(f.getName() + " : l'identifiant « " + e.id() + " » existe déjà");
+                        continue;
+                    }
+                    assistant.userInbox().importFile(path);
+                } else {
+                    assistant.emlInbox().importFile(path);
+                }
+            } catch (RuntimeException e) {
+                problems.add(f.getName() + " : " + e.getMessage());
+            }
+        }
+        loadInbox();
+        problems.addAll(assistant.emlInbox().problems());
+        return problems;
+    }
+
     /** Sélectionne un e-mail ; un e-mail jamais traité part tout de suite au système. */
     void select(InboxItem item) {
         selected.set(item);
@@ -156,8 +199,10 @@ final class MainController {
             try {
                 ProcessingResult r = call.call();
                 long seconds = (System.currentTimeMillis() - start) / 1000;
+                var review = assistant.service().currentReview(item.email.id());
                 Platform.runLater(() -> {
                     item.result = r.routing() != null || item.result == null ? r : merge(item.result, r);
+                    item.findings = review;
                     item.seconds = seconds;
                     if (r.status() == ProcessingResult.Status.PROPOSED) {
                         item.status = InboxItem.Status.PROPOSED;
@@ -226,6 +271,9 @@ final class MainController {
             case Payload.Failure f -> " : " + f.reason();
             case Payload.DraftRequest r -> "";
             case Payload.DraftProposal p -> "";
+            case Payload.ReviewRequest r -> " (relecture)";
+            case Payload.ReviewReport r -> r.findings().isEmpty() ? " : rien à signaler"
+                    : " : " + String.join(", ", r.findings().stream().map(f -> f.code()).toList());
         };
         return LocalTime.now().format(TIME) + "  " + m.performative() + " " + m.sender() + " → " + m.receiver() + detail;
     }

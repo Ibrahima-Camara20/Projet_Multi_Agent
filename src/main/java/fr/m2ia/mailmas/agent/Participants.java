@@ -8,12 +8,15 @@ package fr.m2ia.mailmas.agent;
  * délégation automatique : l'agent destinataire peut la refuser s'il se juge incompétent.</li>
  * <li>{@link #USER} : l'utilisateur. Une demande « au nom de l'utilisateur » (révision après
  * rejet, choix manuel d'un agent) n'est jamais refusée pour raison de compétence.</li>
+ * <li>{@link #CRITIC} : l'agent critique, qui relit les propositions. Il n'est jamais candidat
+ * au routing.</li>
  * </ul>
  */
 public final class Participants {
 
     public static final String ROUTER = "router";
     public static final String USER = "user";
+    public static final String CRITIC = "critic";
 
     private Participants() {
     }

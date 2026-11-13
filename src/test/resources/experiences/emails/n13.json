@@ -1,0 +1,12 @@
+{
+  "id": "n13",
+  "threadId": "n13",
+  "from": "newsletter@techshop-exemple.fr",
+  "to": [
+    "moi@univ.fr"
+  ],
+  "subject": "-30 % sur les ordinateurs portables",
+  "body": "Profitez de -30 % sur une sélection d'ordinateurs portables jusqu'à dimanche ! Livraison offerte dès 50 euros d'achat.\nPour vous désinscrire, cliquez ici.",
+  "receivedAt": "2026-10-16T06:00:00Z",
+  "metadata": {}
+}

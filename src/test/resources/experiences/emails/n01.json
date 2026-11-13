@@ -1,0 +1,12 @@
+{
+  "id": "n01",
+  "threadId": "n01",
+  "from": "tom.bernard@etu.univ.fr",
+  "to": [
+    "moi@univ.fr"
+  ],
+  "subject": "Absence TP mardi",
+  "body": "Bonjour Madame,\n\nJ'étais malade mardi et je n'ai pas pu venir au TP. Comment est-ce que je peux le rattraper ?\n\nMerci,\nTom Bernard",
+  "receivedAt": "2026-10-08T08:10:00Z",
+  "metadata": {}
+}

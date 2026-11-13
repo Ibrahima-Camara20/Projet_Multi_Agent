@@ -1,8 +1,13 @@
 package fr.m2ia.mailmas.app;
 
+import fr.m2ia.mailmas.agent.Agent;
 import fr.m2ia.mailmas.agent.AgentFactory;
+import fr.m2ia.mailmas.agent.AgentMessage;
 import fr.m2ia.mailmas.agent.AgentProfile;
 import fr.m2ia.mailmas.agent.MessageBus;
+import fr.m2ia.mailmas.agent.Participants;
+import fr.m2ia.mailmas.agent.Payload;
+import fr.m2ia.mailmas.agent.Performative;
 import fr.m2ia.mailmas.agent.RoutingAgent;
 import fr.m2ia.mailmas.agent.RoutingOutcome;
 import fr.m2ia.mailmas.memory.ConversationMemory;
@@ -10,6 +15,9 @@ import fr.m2ia.mailmas.model.DraftReply;
 import fr.m2ia.mailmas.model.Email;
 import fr.m2ia.mailmas.model.UserFeedback;
 import fr.m2ia.mailmas.persistence.AgentRepository;
+import fr.m2ia.mailmas.review.CriticAgent;
+import fr.m2ia.mailmas.review.Finding;
+import fr.m2ia.mailmas.review.Finding.Severity;
 import fr.m2ia.mailmas.routing.RoutingDecision;
 
 import java.util.ArrayList;
@@ -41,6 +49,14 @@ import java.util.concurrent.ConcurrentHashMap;
  * <b>Mémoire</b> : ce service est le seul à écrire dans {@link ConversationMemory} (e-mail
  * reçu, chaque brouillon, réponse envoyée) ; le DraftGenerator ne fait que lire.
  * </p>
+ *
+ * <p>
+ * <b>Relecture</b> (si un agent critique est fourni) : chaque proposition lui est envoyée sur le
+ * bus avant d'être rendue à l'interface. Défaut corrigible (formule interdite, mauvaise langue) :
+ * l'agent rédacteur réécrit une fois, automatiquement. Risque de manipulation ou de divulgation :
+ * la rédaction est confiée à l'agent de repli, qui n'a accès à aucun contexte. Le reste est
+ * signalé à l'utilisateur ({@link #currentReview(String)}).
+ * </p>
  */
 public class DefaultAssistantService implements AssistantService {
 
@@ -49,6 +65,8 @@ public class DefaultAssistantService implements AssistantService {
     private final AgentRepository repository;
     private final AgentFactory factory;
     private final ConversationMemory memory;
+    private final Agent critic; // peut être null : pas de relecture
+    private final List<FeedbackListener> feedbackListeners = new java.util.concurrent.CopyOnWriteArrayList<>();
 
     private final Map<String, Case> cases = new ConcurrentHashMap<>();
 
@@ -57,6 +75,15 @@ public class DefaultAssistantService implements AssistantService {
      */
     public DefaultAssistantService(MessageBus bus, RoutingAgent router, AgentRepository repository,
             AgentFactory factory, ConversationMemory memory) {
+        this(bus, router, repository, factory, memory, null);
+    }
+
+    /**
+     * @param critic agent critique enregistré sur le bus, ou null pour désactiver la relecture
+     */
+    public DefaultAssistantService(MessageBus bus, RoutingAgent router, AgentRepository repository,
+            AgentFactory factory, ConversationMemory memory, Agent critic) {
+        this.critic = critic;
         this.bus = Objects.requireNonNull(bus, "bus");
         this.router = Objects.requireNonNull(router, "router");
         this.repository = Objects.requireNonNull(repository, "repository");
@@ -100,6 +127,8 @@ public class DefaultAssistantService implements AssistantService {
                         "aucun agent à qui redemander : choisissez un agent (reroute)");
             if (feedback != null)
                 c.feedback.add(feedback);
+            if (feedback != null && feedback.decision() == UserFeedback.Decision.REJECT && c.lastDraft != null)
+                notifyFeedback(c.lastDraft.agentId(), FeedbackListener.Outcome.REJECTED);
             c.attempt++;
             RoutingOutcome out = router.dispatchTo(c.agentId, c.email, c.feedback, c.attempt, c.decision);
             return record(c, out);
@@ -114,6 +143,8 @@ public class DefaultAssistantService implements AssistantService {
         synchronized (c) {
             if (c.closed)
                 return ProcessingResult.failed(c.email, c.decision, c.agentId, "réponse déjà validée");
+            if (c.lastDraft != null && !agentId.equals(c.lastDraft.agentId()))
+                notifyFeedback(c.lastDraft.agentId(), FeedbackListener.Outcome.REROUTED);
             c.attempt++;
             RoutingOutcome out = router.dispatchTo(agentId, c.email, c.feedback, c.attempt, c.decision);
             if (out.proposed()) {
@@ -145,6 +176,9 @@ public class DefaultAssistantService implements AssistantService {
             memory.recordSent(c.email.threadId(), sent);
             c.sent = sent;
             c.closed = true;
+            boolean edited = !sent.body().strip().equals(c.lastDraft.body().strip());
+            notifyFeedback(c.lastDraft.agentId(),
+                    edited ? FeedbackListener.Outcome.EDITED : FeedbackListener.Outcome.ACCEPTED);
         }
     }
 
@@ -170,8 +204,10 @@ public class DefaultAssistantService implements AssistantService {
                     bus.unregister(p.id());
             }
             bus.register(router);
+            if (critic != null)
+                bus.register(critic);
             for (AgentProfile p : profiles) {
-                if (p.id().equals(router.id()))
+                if (p.id().equals(router.id()) || p.id().equals(Participants.CRITIC))
                     throw new IllegalStateException("identifiant réservé : " + p.id());
                 bus.register(factory.create(p));
             }
@@ -190,6 +226,26 @@ public class DefaultAssistantService implements AssistantService {
         return Optional.ofNullable(cases.get(emailId)).map(c -> c.sent);
     }
 
+    /** Être prévenu des décisions de l'utilisateur sur les propositions (réputation des agents). */
+    public void addFeedbackListener(FeedbackListener listener) {
+        feedbackListeners.add(Objects.requireNonNull(listener, "listener"));
+    }
+
+    private void notifyFeedback(String agentId, FeedbackListener.Outcome outcome) {
+        for (FeedbackListener l : feedbackListeners) {
+            try {
+                l.onFeedback(agentId, outcome);
+            } catch (RuntimeException e) {
+                // un observateur en panne ne doit pas empêcher le traitement de l'e-mail
+            }
+        }
+    }
+
+    /** Remarques de l'agent critique sur la dernière proposition (vide : rien à signaler). */
+    public List<Finding> currentReview(String emailId) {
+        return Optional.ofNullable(cases.get(emailId)).map(c -> c.findings).orElse(List.of());
+    }
+
     /** Agent actuellement responsable d'un e-mail. */
     public Optional<String> assignedAgent(String emailId) {
         return Optional.ofNullable(cases.get(emailId)).map(c -> c.agentId);
@@ -198,6 +254,10 @@ public class DefaultAssistantService implements AssistantService {
     // ------------------------------------------------------------------ interne
 
     private ProcessingResult record(Case c, RoutingOutcome out) {
+        c.findings = List.of();
+        if (out.proposed() && critic != null) {
+            out = reviewAndFix(c, out);
+        }
         if (out.proposed()) {
             c.lastDraft = out.draft();
             memory.recordDraft(c.email.threadId(), out.draft());
@@ -205,6 +265,70 @@ public class DefaultAssistantService implements AssistantService {
                     c.ambiguous, out.draft(), out.explanation());
         }
         return ProcessingResult.failed(c.email, c.decision, out.agentId(), out.explanation());
+    }
+
+    /**
+     * Fait relire la proposition par l'agent critique et applique sa décision : réécriture
+     * automatique (une seule fois) ou passage à l'agent de repli. Met à jour c.findings.
+     */
+    private RoutingOutcome reviewAndFix(Case c, RoutingOutcome out) {
+        List<Finding> findings = askCritic(c.email, out.draft());
+        String note = null;
+
+        if (has(findings, Severity.BLOCK)) {
+            Optional<String> fallback = repository.findAll().stream().filter(AgentProfile::fallback)
+                    .map(AgentProfile::id).findFirst();
+            if (fallback.isPresent() && !fallback.get().equals(out.agentId())) {
+                // La proposition bloquée n'est PAS enregistrée et l'agent de repli repart de zéro (essai 1) :
+                // sinon elle lui serait montrée comme « proposition précédente » et la fuite passerait
+                // par la mémoire du fil. L'isolation doit couvrir le contexte ET l'historique.
+                c.attempt = 1;
+                RoutingOutcome safe = router.redispatch(fallback.get(), c.email, List.of(), c.attempt, c.decision);
+                if (safe.proposed()) {
+                    note = "Relecture : risque de manipulation ou de divulgation, proposition confiée à l'agent "
+                            + "de repli " + fallback.get() + " qui n'a accès à aucun contexte";
+                    List<Finding> kept = new ArrayList<>(findings.stream()
+                            .filter(f -> f.severity() == Severity.BLOCK).toList());
+                    askCritic(c.email, safe.draft()).stream()
+                            .filter(f -> kept.stream().noneMatch(k -> k.code().equals(f.code())))
+                            .forEach(kept::add);
+                    findings = kept;
+                    c.agentId = fallback.get();
+                    c.ambiguous = false;
+                    out = safe;
+                }
+            }
+        } else if (has(findings, Severity.REWRITE)) {
+            memory.recordDraft(c.email.threadId(), out.draft());
+            List<UserFeedback> feedback = new ArrayList<>(c.feedback);
+            feedback.add(UserFeedback.reject(CriticAgent.rewriteInstruction(c.email, findings)));
+            c.attempt++;
+            RoutingOutcome again = router.redispatch(out.agentId(), c.email, feedback, c.attempt, c.decision);
+            if (again.proposed()) {
+                note = "Relecture : proposition réécrite automatiquement ("
+                        + String.join(", ", findings.stream().filter(f -> f.severity() == Severity.REWRITE)
+                                .map(f -> f.code().toLowerCase()).toList()) + ")";
+                findings = askCritic(c.email, again.draft());
+                out = again;
+            }
+        }
+        c.findings = List.copyOf(findings);
+        if (note == null) {
+            return out;
+        }
+        String full = out.note() == null ? note : out.note() + ". " + note;
+        return new RoutingOutcome(out.status(), out.decision(), out.agentId(), out.ambiguous(), out.draft(),
+                out.reason(), out.refusals(), full);
+    }
+
+    private List<Finding> askCritic(Email email, DraftReply draft) {
+        AgentMessage reply = bus.send(AgentMessage.of(Performative.REQUEST, Participants.ROUTER, critic.id(),
+                email.id(), new Payload.ReviewRequest(email, draft)));
+        return reply.payload() instanceof Payload.ReviewReport r ? r.findings() : List.of();
+    }
+
+    private static boolean has(List<Finding> findings, Severity severity) {
+        return findings.stream().anyMatch(f -> f.severity() == severity);
     }
 
     /** État d'un e-mail en cours de traitement. */
@@ -218,6 +342,7 @@ public class DefaultAssistantService implements AssistantService {
         DraftReply lastDraft;
         DraftReply sent;
         boolean closed;
+        List<Finding> findings = List.of();
 
         Case(Email email) {
             this.email = email;

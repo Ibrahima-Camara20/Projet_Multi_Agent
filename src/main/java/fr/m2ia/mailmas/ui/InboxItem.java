@@ -3,6 +3,9 @@ package fr.m2ia.mailmas.ui;
 import fr.m2ia.mailmas.app.ProcessingResult;
 import fr.m2ia.mailmas.model.DraftReply;
 import fr.m2ia.mailmas.model.Email;
+import fr.m2ia.mailmas.review.Finding;
+
+import java.util.List;
 
 /**
  * État d'un e-mail dans l'interface. Modifié uniquement dans le thread JavaFX
@@ -34,6 +37,8 @@ final class InboxItem {
     long startedAt;
     /** Message d'erreur si le traitement a échoué. */
     String error;
+    /** Remarques de l'agent critique sur la proposition affichée. */
+    List<Finding> findings = List.of();
     /** Réponse validée par l'utilisateur. */
     DraftReply sent;
 
