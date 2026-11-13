@@ -1,0 +1,12 @@
+{
+  "id": "n14",
+  "threadId": "n14",
+  "from": "bureau@echecs-club-exemple.fr",
+  "to": [
+    "moi@univ.fr"
+  ],
+  "subject": "Renouvellement de votre adhésion",
+  "body": "Bonjour,\n\nVotre adhésion au club arrive à échéance le 31 octobre. Souhaitez-vous la renouveler pour la saison 2026-2027 ?\n\nLe bureau du club",
+  "receivedAt": "2026-10-16T18:30:00Z",
+  "metadata": {}
+}

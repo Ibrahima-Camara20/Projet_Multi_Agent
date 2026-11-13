@@ -74,4 +74,46 @@ class JsonInboxTest {
         var dup = assertThrows(RepositoryException.class, () -> new JsonInbox(dir).findAll());
         assertTrue(dup.getMessage().contains("double"));
     }
+
+    @Test
+    void savedEmailIsReadBack() {
+        JsonInbox inbox = new JsonInbox(dir);
+        String id = inbox.newId();
+        inbox.save(new Email(id, null, "lea.martin@etu.univ.fr", null, "Rendu du TP3", "Bonjour Madame",
+                Instant.parse("2026-11-11T08:30:00Z"), null));
+
+        Email read = inbox.findById(id).orElseThrow();
+        assertTrue(id.startsWith("form-"));
+        assertEquals(id, read.threadId());
+        assertEquals("Bonjour Madame", read.body());
+        assertEquals(Instant.parse("2026-11-11T08:30:00Z"), read.receivedAt());
+    }
+
+    @Test
+    void newIdsAreUnique() {
+        JsonInbox inbox = new JsonInbox(dir);
+        String first = inbox.newId();
+        inbox.save(new Email(first, null, "a@x.fr", null, "", "", null, null));
+        assertNotEquals(first, inbox.newId());
+    }
+
+    @Test
+    void importChecksTheFileAndCopiesIt() throws Exception {
+        write("ext.json", """
+                { "id": "ext-1", "from": "paul.durand@univ.fr", "subject": "Jury" }""");
+        write("bad.json", "{ pas du json");
+        JsonInbox target = new JsonInbox(dir.resolve("inbox"));
+
+        target.importFile(dir.resolve("ext.json"));
+        assertEquals("Jury", target.findById("ext-1").orElseThrow().subject());
+        assertThrows(RepositoryException.class, () -> target.importFile(dir.resolve("bad.json")));
+    }
+
+    @Test
+    void unsafeIdentifierIsRefused() throws Exception {
+        write("evil.json", """
+                { "id": "../../evil", "from": "x@y.fr" }""");
+        JsonInbox target = new JsonInbox(dir.resolve("inbox"));
+        assertThrows(RepositoryException.class, () -> target.importFile(dir.resolve("evil.json")));
+    }
 }

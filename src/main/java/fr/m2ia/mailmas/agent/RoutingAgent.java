@@ -94,9 +94,10 @@ public class RoutingAgent implements Agent {
         return settings;
     }
 
-    /** Agents spécialisés actuellement disponibles (tout ce qui est sur le bus, sauf le router). */
+    /** Agents spécialisés actuellement disponibles (tout ce qui est sur le bus, sauf le router et le critique). */
     public List<AgentProfile> specialists() {
-        return bus.registeredAgents().stream().filter(p -> !p.id().equals(id())).toList();
+        return bus.registeredAgents().stream()
+                .filter(p -> !p.id().equals(id()) && !p.id().equals(Participants.CRITIC)).toList();
     }
 
     /** Classe les agents sans rien leur demander (aperçu dans l'interface, expériences). */
@@ -160,6 +161,16 @@ public class RoutingAgent implements Agent {
     public RoutingOutcome dispatchTo(String agentId, Email email, List<UserFeedback> feedback, int attempt,
             RoutingDecision decision) {
         return dispatch(email, feedback, attempt, decision, false, List.of(agentId), Participants.USER, null);
+    }
+
+    /**
+     * Demande directe à un agent donné, à l'initiative du système (relecture par l'agent critique :
+     * réécriture automatique ou passage à l'agent de repli). Envoyée au nom du router, comme une
+     * délégation.
+     */
+    public RoutingOutcome redispatch(String agentId, Email email, List<UserFeedback> feedback, int attempt,
+            RoutingDecision decision) {
+        return dispatch(email, feedback, attempt, decision, false, List.of(agentId), Participants.ROUTER, null);
     }
 
     private RoutingOutcome dispatch(Email email, List<UserFeedback> feedback, int attempt,

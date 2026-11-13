@@ -1,6 +1,7 @@
 package fr.m2ia.mailmas.ui;
 
 import javafx.geometry.Pos;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
@@ -8,9 +9,12 @@ import javafx.scene.control.ListView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
+import javafx.stage.FileChooser;
 
+import java.io.File;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Locale;
 
 /** Colonne de gauche : la boîte de réception. */
@@ -32,7 +36,13 @@ final class InboxPane extends VBox {
         Button refresh = new Button("Actualiser");
         refresh.getStyleClass().add("small-button");
         refresh.setOnAction(e -> controller.loadInbox());
-        HBox header = new HBox(count, Ui.spacer(), refresh);
+        Button newEmail = new Button("Nouveau");
+        newEmail.getStyleClass().add("small-button");
+        newEmail.setOnAction(e -> newEmail());
+        Button importFiles = new Button("Importer");
+        importFiles.getStyleClass().add("small-button");
+        importFiles.setOnAction(e -> importFiles());
+        HBox header = new HBox(6, count, Ui.spacer(), newEmail, importFiles, refresh);
         header.getStyleClass().add("pane-header");
         header.setAlignment(Pos.CENTER_LEFT);
 
@@ -47,6 +57,42 @@ final class InboxPane extends VBox {
         updateCount();
 
         getChildren().addAll(header, list);
+    }
+
+    /** Formulaire « Nouvel e-mail » : l'e-mail ajouté est sélectionné, donc traité tout de suite. */
+    private void newEmail() {
+        new NewEmailDialog(controller.assistant().contacts().findAll(), controller.assistant().inbox().findAll())
+                .showAndWait()
+                .ifPresent(r -> {
+                    var email = controller.addEmail(r.from(), r.subject(), r.body(), r.replyTo());
+                    controller.items().stream()
+                            .filter(i -> i.email.id().equals(email.id()))
+                            .findFirst()
+                            .ifPresent(i -> {
+                                list.getSelectionModel().select(i);
+                                list.scrollTo(i);
+                            });
+                });
+    }
+
+    /** Import de fichiers .eml ou .json ; les fichiers refusés sont listés avec la raison. */
+    private void importFiles() {
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("Importer des e-mails");
+        chooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("E-mails (.eml, .json)", "*.eml", "*.json"),
+                new FileChooser.ExtensionFilter("Fichiers .eml", "*.eml"),
+                new FileChooser.ExtensionFilter("Fichiers .json", "*.json"));
+        List<File> files = chooser.showOpenMultipleDialog(getScene().getWindow());
+        if (files == null || files.isEmpty()) {
+            return;
+        }
+        List<String> problems = controller.importFiles(files);
+        if (!problems.isEmpty()) {
+            Alert alert = new Alert(Alert.AlertType.WARNING, String.join("\n", problems));
+            alert.setHeaderText("Certains fichiers n'ont pas été importés");
+            alert.showAndWait();
+        }
     }
 
     private void updateCount() {

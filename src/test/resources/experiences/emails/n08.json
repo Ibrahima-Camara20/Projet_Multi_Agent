@@ -1,0 +1,12 @@
+{
+  "id": "n08",
+  "threadId": "n08",
+  "from": "comptabilite@univ.fr",
+  "to": [
+    "moi@univ.fr"
+  ],
+  "subject": "Remboursement - mission du 22 septembre",
+  "body": "Bonjour,\n\nNous avons bien reçu votre dossier de remboursement pour la mission du 22 septembre. Il nous manque le numéro de l'ordre de mission pour finaliser le paiement.\n\nCordialement,\nService comptabilité",
+  "receivedAt": "2026-10-14T08:45:00Z",
+  "metadata": {}
+}

@@ -4,12 +4,16 @@ Système multi-agent en Java qui propose des réponses aux e-mails reçus. Un **
 analyse chaque e-mail et le confie à l'**agent spécialisé** le plus adapté (étudiants, collègues,
 administration, projet SuperMASProject, ou agent de repli). L'agent rédige une proposition avec un
 **LLM exécuté localement** (Ollama), à partir de son propre contexte et de l'historique du fil.
-**Rien n'est envoyé sans validation de l'utilisateur**, qui peut valider, modifier, rejeter avec un
-commentaire ou confier l'e-mail à un autre agent, depuis une interface graphique JavaFX.
+Un **agent critique** relit chaque proposition avant l'utilisateur. **Rien n'est envoyé sans
+validation de l'utilisateur**, qui peut valider, modifier, rejeter avec un commentaire ou confier
+l'e-mail à un autre agent, depuis une interface graphique JavaFX.
 
 Projet du Master 2 Intelligence Artificielle, réalisé en binôme :
 - **Personne A (Rania)** : cœur multi-agent et routing ;
-- **Personne B (Ibrahima)** : LLM local, contexte, mémoire, persistance, interface.
+- **Personne B (Ibrahima)** : LLM local, contexte, mémoire, persistance, interface, agent critique,
+  réputation, expériences.
+
+Rapport : [`docs/rapport/`](docs/rapport/).
 
 ---
 
@@ -58,8 +62,9 @@ rouge (Ollama injoignable : les propositions échouent avec un message clair et 
 .\mvnw.cmd -q compile exec:java "-Dexec.args=--fresh 001"      # mémoire temporaire, rien n'est écrit
 ```
 
-Pour chaque e-mail : les échanges entre agents (`[bus] REQUEST router -> student`), le classement du
-routing avec sa justification, l'agent retenu (et si le cas est ambigu), puis la proposition.
+Pour chaque e-mail : les échanges entre agents (`[bus] REQUEST router -> student`,
+`[bus] INFORM critic -> router`), le classement du routing avec sa justification, l'agent retenu
+(et si le cas est ambigu), la proposition, puis les remarques de l'agent critique.
 
 ### Tests
 
@@ -67,8 +72,9 @@ routing avec sa justification, l'agent retenu (et si le cas est ambigu), puis la
 .\mvnw.cmd clean test
 ```
 
-123 tests. Les deux tests qui appellent le vrai modèle (`OllamaLLMClientTest`, `SuperMasScenarioTest`)
-sont **ignorés automatiquement** si Ollama n'est pas lancé.
+161 tests. Les tests qui appellent le vrai modèle (`OllamaLLMClientTest`, `SuperMasScenarioTest`)
+sont **ignorés automatiquement** si Ollama n'est pas lancé ; les expériences ne se lancent qu'à la
+demande (section 9).
 
 ---
 
@@ -78,11 +84,11 @@ Trois écrans, accessibles depuis l'en-tête.
 
 | Écran | Contenu |
 |---|---|
-| **Boîte de réception** | À gauche, les e-mails avec l'agent retenu et leur état (à traiter, en rédaction, proposition prête, ambigu, validé). Au centre, l'e-mail et la proposition, modifiable, avec les boutons **Valider**, **Rejeter avec un commentaire** (le même agent réécrit, proposition n°2) et **Changer d'agent** ; un bandeau signale les cas ambigus et propose de confier l'e-mail à l'autre agent. À droite, l'**explication** : scores du routing et leurs justifications, documents de contexte utilisés, journal des échanges entre agents. |
-| **Agents** | Créer, modifier ou supprimer un agent : nom, description, mots-clés, adresses, rôles, agent de repli, **consignes (system prompt)**, fichiers de contexte. « Enregistrer et recharger » applique les changements **sans redémarrer**. |
-| **Contacts** | L'annuaire utilisé par le routing. Les rôles proposés sont ceux que déclarent les agents (on ne peut pas créer un rôle qu'aucun agent ne reconnaît). |
+| **Boîte de réception** | À gauche, les e-mails avec l'agent retenu et leur état ; boutons **Nouveau** (formulaire pour saisir ou coller un e-mail, éventuellement « en réponse à » un e-mail existant) et **Importer** (fichiers `.eml` ou `.json`). Au centre, l'e-mail et la proposition, modifiable, avec **Valider**, **Rejeter avec un commentaire** (le même agent réécrit) et **Changer d'agent** ; un bandeau signale les cas ambigus, un autre les remarques de l'**agent critique** (orange : réécriture ou point à vérifier ; rouge : possible manipulation). À droite, l'**explication** : scores du routing et leurs justifications, documents de contexte utilisés, journal des échanges entre agents. |
+| **Agents** | Créer, modifier ou supprimer un agent : nom, description, mots-clés, adresses, rôles, agent de repli, **consignes (system prompt)**, fichiers de contexte. « Enregistrer et recharger » applique les changements **sans redémarrer**. Chaque agent affiche sa **réputation**. |
+| **Contacts** | L'annuaire utilisé par le routing. Les rôles proposés sont ceux que déclarent les agents. |
 
-Cliquer sur un e-mail lance automatiquement son traitement. Un appel au modèle prend de 20 à 60 s :
+Cliquer sur un e-mail lance automatiquement son traitement. Un appel au modèle prend de 10 à 60 s :
 il passe par un thread de travail dédié, l'interface reste utilisable et affiche le temps écoulé.
 
 ---
@@ -91,41 +97,44 @@ il passe par un thread de travail dédié, l'interface reste utilisable et affic
 
 ### Organisation multi-agent
 
-Organisation **centralisée coordinateur-spécialistes**. Les agents ne se connaissent pas : ils
-échangent des messages typés inspirés de FIPA-ACL (`REQUEST`, `PROPOSE`, `REFUSE`, `FAILURE`) par
-un bus (Mediator). Un agent peut **refuser** une demande ; le coordinateur délègue alors au
-candidat suivant, puis à l'agent de repli.
+Organisation **centralisée coordinateur-spécialistes**, avec un **agent critique** et l'utilisateur
+comme autorité finale. Les agents ne se connaissent pas : ils échangent des messages typés inspirés
+de FIPA-ACL (`REQUEST`, `PROPOSE`, `REFUSE`, `FAILURE`, `INFORM`) par un bus (Mediator). Un agent
+peut **refuser** une demande ; le coordinateur délègue alors au candidat suivant, puis à l'agent de repli.
 
 ```
 Interface / App ──► AssistantService ──► RoutingAgent ──► RoutingStrategy (classement + justification)
-                                              │
-                                              ▼  REQUEST (MessageBus)
-                                      Agent spécialisé ──► DraftGenerator ──► contexte + historique
-                                              │                                + prompt ──► LLM local
-                                              ▼  PROPOSE / REFUSE / FAILURE
-                                     ProcessingResult ──► utilisateur : valider / modifier /
-                                                                      rejeter (revise) / changer d'agent (reroute)
+                          │                    │
+                          │                    ▼  REQUEST (MessageBus)
+                          │            Agent spécialisé ──► DraftGenerator ──► contexte + historique + prompt ──► LLM local
+                          │                    │
+                          │                    ▼  PROPOSE
+                          ├──── REQUEST ──► Agent critique ── INFORM (remarques)
+                          │        réécriture automatique / agent de repli / signalement
+                          ▼
+                  ProcessingResult ──► utilisateur : valider / modifier / rejeter / changer d'agent
+                          │
+                          └──► réputation des agents (Observer)
 ```
 
 ### Architecture logicielle
 
 Architecture en couches de type **ports et adaptateurs** : le cœur ne dépend que d'interfaces
 (les contrats communs) ; les détails techniques (Ollama, fichiers JSON, interface) sont des
-adaptateurs remplaçables. `MailAssistant` est la **racine de composition** : c'est le seul endroit
-qui crée les classes concrètes et les relie. La démo console et l'interface graphique l'utilisent
-toutes deux, et pilotent donc exactement le même système.
+adaptateurs remplaçables. `MailAssistant` est la **racine de composition** : le seul endroit qui
+crée les classes concrètes et les relie. La console et l'interface pilotent donc le même système.
 
 ### Design patterns
 
 | Pattern | Où | Besoin |
 |---|---|---|
 | Mediator | `SimpleMessageBus` | Les agents ne se référencent jamais entre eux |
-| Observer | `MessageListener` | Le journal de l'interface suit en direct les échanges entre agents |
+| Observer | `MessageListener`, `FeedbackListener` | Journal en direct ; réputation alimentée par les décisions de l'utilisateur |
 | Strategy | `RoutingStrategy` (mots-clés, expéditeur, métadonnées, fil, LLM) | Changer et comparer les méthodes de routing |
-| Composite | `WeightedRoutingStrategy`, `CompositeContextProvider` | Combiner des stratégies / des sources de contexte |
+| Composite | `WeightedRoutingStrategy`, `CompositeContextProvider`, `CompositeMailSource` | Combiner stratégies, sources de contexte ou sources d'e-mails |
 | Facade | `AssistantService`, `DraftGenerator` | Frontières simples entre interface, partie A et partie B |
-| Adapter | `OllamaLLMClient` | Changer de moteur LLM sans toucher aux agents |
-| Repository | `JsonAgentRepository`, `JsonContactDirectory`, `JsonInbox`, `FileConversationMemory` | Persistance indépendante du format |
+| Adapter | `OllamaLLMClient`, `EmlMailSource` | Changer de moteur LLM ou de source d'e-mails sans toucher aux agents |
+| Repository | `JsonAgentRepository`, `JsonContactDirectory`, `JsonInbox`, `FileConversationMemory`, `ReputationStore` | Persistance indépendante du format |
 | Factory | `DefaultAgentFactory` | Profil → agent |
 
 ---
@@ -137,15 +146,18 @@ toutes deux, et pilotent donc exactement le même système.
 | `model` | `Email`, `Contact`, `DraftReply`, `UserFeedback`, `ConversationEntry` | commun |
 | `config` | `AppConfig` (lecture de `app.properties`) | commun |
 | *(racine)* | `MailAssistant` (racine de composition), `App` (démonstrateur console) | commun |
-| `agent` | `SimpleMessageBus`, `SpecializedAgent`, `RoutingAgent`, `DefaultAgentFactory` | A |
+| `agent` | `SimpleMessageBus`, `SpecializedAgent`, `RoutingAgent`, `DefaultAgentFactory`, `Payload`, `Performative` | A |
 | `routing` | `KeywordRoutingStrategy`, `SenderRoutingStrategy`, `MetadataRoutingStrategy`, `ThreadAffinityStrategy`, `LlmRoutingStrategy`, `WeightedRoutingStrategy` | A |
-| `app` | `DefaultAssistantService` (submit, revise, reroute, accept, reloadAgents) | A |
+| `app` | `DefaultAssistantService` (submit, revise, reroute, accept, reloadAgents, relecture), `FeedbackListener` | A, relecture B |
 | `llm` | `OllamaLLMClient`, `StubLLMClient` | B |
-| `generation` | `DefaultDraftGenerator`, `PromptBuilder` | B |
+| `generation` | `DefaultDraftGenerator`, `PromptBuilder` (règles communes, langue imposée) | B |
 | `context` | `FileContextProvider`, `CompositeContextProvider`, `Context` (budget de tokens) | B |
 | `memory` | `FileConversationMemory` (historique sur disque), `InMemoryConversationMemory` (tests) | B |
 | `persistence` | `JsonAgentRepository`, `JsonContactDirectory`, `JsonInbox` | B |
-| `ui` | `MailMasApp`, `MainController`, `InboxPane`, `EmailPane`, `ExplainPane`, `AgentsPane`, `ContactsPane` | B |
+| `inbox` | `MailSource`, `CompositeMailSource`, `EmlMailSource`, `EmlParser` | B |
+| `review` | `CriticAgent`, `Finding`, `TextChecks` | B |
+| `reputation` | `Reputation`, `ReputationStore` | B |
+| `ui` | `MailMasApp`, `MainController`, `InboxPane`, `EmailPane`, `NewEmailDialog`, `ExplainPane`, `AgentsPane`, `ContactsPane` | B |
 
 Les **interfaces** de chaque package sont des contrats communs : toute modification passe par
 une Pull Request relue par l'autre membre du binôme.
@@ -178,20 +190,22 @@ Tout se modifie **sans recompiler**, à la main ou depuis l'interface.
 |---|---|
 | `config/agents/<id>.json` | Profil d'un agent : nom, description, sources de contexte, indices de routing (adresses, rôles, mots-clés), repli |
 | `config/agents/<id>.md` | **Consignes** de l'agent (system prompt) |
-| `config/context/<agent>/*.md` | **Contexte** de l'agent : uniquement des **faits** (dates, membres, procédures), jamais des consignes |
+| `config/context/<agent>/*.md` | **Contexte** de l'agent : uniquement des **faits** (dates, membres, procédures, disponibilités), jamais des consignes. Environ 11 000 caractères au total : fiche du module, règles et FAQ pour les étudiants ; service, jury et réunions pour les collègues ; missions et RH pour l'administration ; livrables, membres et réunions pour SuperMAS. |
 | `config/contacts.json` | Annuaire : adresse, nom, rôles (`student`, `teacher`, `research-partner`...) |
-| `config/inbox/*.json` | Boîte de réception simulée (un fichier par e-mail, date au format `2026-09-28T09:15:00Z`) |
-| `data/conversations/<fil>.jsonl` | **Historique des fils** (reçus, propositions, réponses validées), une entrée par ligne. **Exclu de Git** : il contient des e-mails. |
+| `config/inbox/*.json` | E-mails de démonstration (date au format `2026-09-28T09:15:00Z`) |
+| `data/inbox/` | E-mails ajoutés par l'utilisateur : `.json` du formulaire « Nouveau », `.eml` et `.json` importés. **Exclu de Git.** |
+| `data/conversations/<fil>.jsonl` | **Historique des fils** (reçus, propositions, réponses validées), une entrée par ligne. **Exclu de Git.** |
+| `data/reputation.json` | Réputation de chaque agent. **Exclu de Git.** |
 
 Un dossier de contexte vide contient un fichier `.gitkeep`, ignoré par le `FileContextProvider`
-(qui ne lit que les `.md` et `.txt`).
+(qui ne lit que les `.md` et `.txt`). Écrire les faits **sous la forme exacte utile** : « libre de
+13h30 à 18h, donc libre à 14h » plutôt que « libre l'après-midi » (le modèle ne fait pas la déduction).
 
 ### Ajouter un agent
 
 Depuis l'écran **Agents** : « Nouvel agent », remplir le formulaire, « Créer l'agent ». Le dossier
-`config/context/<id>/` est créé ; y déposer les documents de l'agent. À la main : créer
-`config/agents/<id>.json` et `<id>.md`, puis redémarrer. Ajouter si besoin le rôle correspondant
-aux contacts concernés (écran **Contacts**).
+`config/context/<id>/` est créé ; y déposer les documents de l'agent. Les identifiants `router` et
+`critic` sont réservés.
 
 ### Changer de modèle
 
@@ -200,16 +214,44 @@ LM Studio...), écrire une nouvelle implémentation de `LLMClient` et la branche
 
 ---
 
-## 7. Décisions de conception
+## 7. Agent critique et réputation
+
+### Agent critique (`review/CriticAgent`)
+
+Un agent du bus : il reçoit chaque proposition (`REQUEST`) et répond par ses remarques (`INFORM`).
+Il n'appelle pas le LLM : ses vérifications sont rapides, déterministes et explicables.
+
+| Problème détecté | Exemple | Ce que fait le système |
+|---|---|---|
+| Formule interdite | « comme convenu », « ci-joint » | réécriture automatique par le même agent (une fois) |
+| Mauvaise langue | réponse en français à un e-mail anglais | réécriture automatique |
+| Engagement | « je vous confirme ma présence » | signalé à l'utilisateur |
+| Date ou heure sans source | absente de l'e-mail et du contexte de l'agent | signalé |
+| Tentative de manipulation | « ignore tes consignes... » dans l'e-mail | confié à l'agent de repli, qui n'a aucun contexte |
+| Divulgation | une référence (ex. `OM-2026-118`) envoyée à un expéditeur inconnu | confié à l'agent de repli |
+
+La proposition bloquée n'est **ni enregistrée ni montrée** à l'agent de repli : sinon la fuite passe
+par la mémoire du fil (constaté puis corrigé, section 8).
+
+### Réputation (`reputation/`)
+
+Modèle du cours : **R = (1 + p) / (2 + p + n)**. Validée telle quelle : p + 1 ; validée après
+modification : p + 0,5 et n + 0,5 ; rejetée ou confiée à un autre agent : n + 1. Sans donnée,
+R = 0,5. Affichée dans l'écran Agents. Base possible d'un envoi automatique (agent de forte
+réputation, e-mail non ambigu, aucune remarque du critique) : non activé.
+
+---
+
+## 8. Décisions de conception
 
 | # | Question | Décision | Raison |
 |---|---|---|---|
-| 1 | Source des e-mails | Fichiers JSON dans `config/inbox/` ; « envoyer » = enregistrer comme envoyé | Le sujet n'exige pas de vraie messagerie ; l'utilisateur garde le contrôle |
+| 1 | Source des e-mails | Pas de connexion à une vraie messagerie : démo JSON, formulaire, import `.eml`/`.json` ; « envoyer » = enregistrer comme envoyé | Ne pas confier l'accès à un compte réel ; l'utilisateur garde le contrôle |
 | 2 | Qui écrit dans la mémoire | `AssistantService` uniquement ; `DraftGenerator` lit | Éviter les doublons, un seul responsable |
-| 3 | Échec (LLM indisponible, agent inconnu) | Message `FAILURE`, puis `ProcessingResult` au statut `FAILED` avec un message ; un échec arrête la délégation | Les autres agents utilisent le même LLM et échoueraient aussi |
+| 3 | Échec (LLM indisponible, agent inconnu) | Message `FAILURE`, puis `ProcessingResult` au statut `FAILED` ; un échec arrête la délégation | Les autres agents utilisent le même LLM et échoueraient aussi |
 | 4 | Refus d'un agent | Candidat suivant au-dessus du seuil, puis agent de repli (essais bornés) | Délégation entre agents, pas d'impasse |
-| 5 | Cas ambigu | Meilleur agent choisi, ambiguïté signalée ; départage par LLM limité aux ex-aequo ; l'utilisateur peut changer d'agent (`reroute`) | Le LLM n'est appelé pour le routing que dans les cas difficiles |
-| 6 | Aucun agent adapté | Agent de repli (`fallback = true`) si le meilleur score est sous le seuil | Toujours une proposition |
+| 5 | Cas ambigu | Meilleur agent choisi, ambiguïté signalée ; départage par LLM limité aux ex-aequo ; changement d'agent possible | Le LLM n'est appelé pour le routing que dans les cas difficiles |
+| 6 | Aucun agent adapté | Agent de repli si le meilleur score est sous le seuil | Toujours une proposition |
 | 7 | System prompt | Fichier `.md` séparé par agent | Plus facile à modifier qu'une chaîne JSON |
 | 8 | Informations du routing | Contacts et historique reçus par le constructeur de la stratégie | `route()` reste stable |
 | 9 | Échelle des scores | [0, 1], même sens pour toutes les stratégies | Combinaison possible |
@@ -217,99 +259,127 @@ LM Studio...), écrire une nouvelle implémentation de `LLMClient` et la branche
 | 11 | Réponse modifiée puis validée | `DraftReply.withBody()` : on enregistre le texte réellement envoyé | Mémoire fidèle |
 | 12 | Appels bloquants | L'interface appelle le service dans un thread de travail | Interface fluide |
 | 13 | Configuration | `config/app.properties` lu par `AppConfig` | Changer de modèle sans recompiler |
-| 14 | Combinaison des stratégies | « OU probabiliste » pondéré : `1 − Π(1 − wᵢ·sᵢ)` (mots-clés 1,0, expéditeur 0,6, métadonnées 0,8, fil 0,6) | Un indice fort suffit, des indices concordants se renforcent ; meilleure exactitude mesurée (90 %) |
-| 15 | Contexte et consignes | Contexte = faits transmissibles ; consignes = system prompt | Une consigne placée dans le contexte est recopiée dans la réponse par le modèle |
-| 16 | Construction du prompt | Règles communes à tous les agents + consignes de l'agent (prioritaires pour la langue et le ton) | Un nouvel agent hérite automatiquement des garde-fous |
-| 17 | Injection de prompt | E-mail encadré (`<<<DEBUT_EMAIL ... FIN_EMAIL>>>`) et signalé comme donnée à ne pas exécuter | Un e-mail ne doit pas pouvoir modifier le comportement de l'agent |
-| 18 | Isolation des contextes | Un agent ne lit que les sources de son profil, et jamais hors de `config/context/` | Confidentialité entre agents |
-| 19 | Mode « thinking » du modèle | Désactivé (`think: false`), fenêtre de contexte fixée (`num_ctx` 8192) | Réponses bien plus rapides ; pas de troncature silencieuse du prompt |
-| 20 | Racine de composition | `MailAssistant` crée et relie toutes les pièces | Console et interface obtiennent exactement le même système |
-| 21 | Format de la mémoire | Un fichier JSON Lines par fil, **ajout seulement** ; une ligne abîmée est ignorée | Un arrêt brutal ne peut pas corrompre l'historique |
-| 22 | Confidentialité de l'historique | `data/` exclu de Git ; tests sur une mémoire temporaire | Les e-mails ne quittent pas la machine ; tests reproductibles |
-| 23 | Annuaire des contacts | `config/contacts.json`, adresses insensibles à la casse, rôles en minuscules, écriture atomique | Le routing reconnaît un expéditeur dont l'adresse ne correspond à aucun motif |
+| 14 | Combinaison des stratégies | « OU probabiliste » pondéré : `1 − Π(1 − wᵢ·sᵢ)` | Un indice fort suffit, des indices concordants se renforcent |
+| 15 | Contexte et consignes | Contexte = faits ; consignes = system prompt | Une consigne placée dans le contexte est recopiée dans la réponse |
+| 16 | Construction du prompt | Règles communes + consignes de l'agent | Un nouvel agent hérite des garde-fous |
+| 17 | Injection de prompt | E-mail encadré et signalé comme donnée ; marqueurs neutralisés | Un e-mail ne doit pas modifier le comportement de l'agent |
+| 18 | Isolation des contextes | Un agent ne lit que ses sources, jamais hors de `config/context/` | Confidentialité entre agents |
+| 19 | Mode « thinking » du modèle | Désactivé, fenêtre de contexte fixée (`num_ctx` 8192) | Réponses plus rapides, pas de troncature silencieuse |
+| 20 | Racine de composition | `MailAssistant` crée et relie toutes les pièces | Console et interface obtiennent le même système |
+| 21 | Format de la mémoire | JSON Lines par fil, ajout seulement | Un arrêt brutal ne corrompt pas l'historique |
+| 22 | Confidentialité | `data/` exclu de Git ; tests sur une mémoire temporaire | Les e-mails ne quittent pas la machine |
+| 23 | Annuaire des contacts | `config/contacts.json`, écriture atomique | Le routing reconnaît un expéditeur connu |
 | 24 | Dates des e-mails | Converties par `JsonInbox` (ISO-8601) | Pas de module Jackson supplémentaire |
-| 25 | Appels au modèle depuis l'interface | Un **seul** thread de travail ; résultats renvoyés par `Platform.runLater` | Interface jamais gelée, modèle local jamais sollicité deux fois en même temps |
-| 26 | Explicabilité | Scores, justifications, contexte utilisé et journal du bus affichés à côté de chaque proposition | L'utilisateur comprend et peut corriger le choix de l'agent |
-| 27 | Rôles des contacts dans l'interface | Cases à cocher générées à partir des rôles déclarés par les agents | Pas de rôle orphelin qu'aucun agent ne reconnaîtrait |
-| 28 | Identifiants (agents, fils) | Vérifiés ou convertis avant de servir de nom de fichier | Pas d'écriture hors des dossiers prévus (`../../`) |
+| 25 | Appels au modèle depuis l'interface | Un **seul** thread de travail | Interface jamais gelée, modèle jamais sollicité deux fois |
+| 26 | Explicabilité | Scores, justifications, contexte utilisé, journal du bus, remarques du critique | L'utilisateur comprend et corrige |
+| 27 | Rôles des contacts | Générés à partir des rôles déclarés par les agents | Pas de rôle orphelin |
+| 28 | Identifiants (agents, fils, e-mails) | Vérifiés ou convertis avant de servir de nom de fichier | Pas d'écriture hors des dossiers prévus |
+| 29 | Lecture des `.eml` | Lecteur MIME écrit en Java standard, sans dépendance | `pom.xml` inchangé ; remplaçable par Jakarta Mail |
+| 30 | Langue de la réponse | Détectée dans l'e-mail et **imposée** à la fin du prompt | Avec un long contexte français, le modèle répondait en français aux e-mails anglais (78 % → 100 %) |
+| 31 | Agent critique | Agent du bus, sans LLM ; réécrit, signale ou confie à l'agent de repli | Une consigne ne suffit pas : il faut détecter les violations des normes |
+| 32 | Isolation | Une proposition bloquée n'est ni enregistrée ni montrée à l'agent suivant | L'isolation doit couvrir le contexte **et** l'historique |
+| 33 | Réputation | Modèle Beta du cours, alimenté par les décisions de l'utilisateur (Observer) | Mesurer la qualité de chaque agent dans la durée |
+| 34 | Expériences | Configuration **gelée** pendant les mesures ; 3 essais par e-mail | Les résultats ne sont pas réglés sur le jeu de test |
 
 ---
 
-## 8. Résultats
+## 9. Résultats
 
-### Routing (21 e-mails étiquetés, `RoutingScenariosTest`)
+### Routing
 
-| Configuration | Exactitude |
+| Jeu | Configuration | Bon agent |
+|---|---|---|
+| 21 e-mails étiquetés (`RoutingScenariosTest`) | mots-clés seuls / expéditeur seul / **pondérée** | 76 % / 86 % / **90 %** |
+| 15 e-mails jamais vus (n01 à n15) | pondérée | 80 % (12/15) |
+| 21 e-mails de l'expérience | pondérée + départage LLM | 86 % ; 90 % avec le critique |
+
+Erreurs sur les e-mails nouveaux : deux collègues absentes de l'annuaire envoyées à l'agent
+étudiant (« partiel », « stage ») ; l'e-mail piégé (n15) envoyé à l'administration par **ses
+propres mots-clés** : une manipulation du routing par signal stratégique.
+
+### Agent unique ou multi-agent ?
+
+Expérience `SingleVsMultiAgentExperimentTest` : 21 e-mails (6 de la démo, 15 nouveaux), 3 essais
+chacun, même modèle et même budget de contexte. L'agent unique reçoit les consignes de tous les
+agents et tout le contexte.
+
+| | Multi-agent | Agent unique | Multi sans contexte |
+|---|---|---|---|
+| Faits attendus | 72 % | 75 % | **9 %** |
+| Bon registre (tu/vous) | **90 %** | 81 % | 100 % |
+| Formule interdite | 22 % | 10 % | 3 % |
+| Réponses de plus de 90 s | **0 %** | 37 % | 0 % |
+
+- **Le contexte est le facteur décisif** (72 % des faits contre 9 % sans).
+- Sur les faits, l'agent unique fait jeu égal : la recherche par pertinence trouve les bons passages.
+- La spécialisation apporte un **temps prévisible**, un **meilleur registre** et l'**isolation** des
+  informations, à condition que le routing soit juste : une erreur de routing se propage à la réponse.
+
+### Langue imposée et agent critique
+
+| | Multi-agent | + langue imposée | + langue + critique |
+|---|---|---|---|
+| Bonne langue | 78 % | **100 %** | **100 %** |
+| Formule interdite | 22 % | 21 % | **8 %** |
+| Faits attendus | 72 % | 72 % | 74 % |
+| Fuite sur l'e-mail piégé (n15) | 3/3 | 3/3 | **0/3** (après correctif) |
+
+Le critique a corrigé 10 % des propositions. Il ne voit pas les erreurs de fond : déduction fausse
+(« jeudi 14h ne me convient pas » alors que le créneau est libre), année erronée, reformulation
+inconnue (« je vous transmets »). La relecture humaine reste indispensable.
+
+### Évolution du prompt (e-mail SuperMAS d'Anna)
+
+| Version | Effet observé |
 |---|---|
-| Mots-clés seuls | 76 % |
-| Expéditeur seul | 86 % |
-| **Combinaison pondérée** | **90 %** |
-| Pondérée + refus par règles | 76 % |
+| v0 : aucune consigne | Plusieurs modèles de réponse, heure inventée |
+| v1 : règles communes + consignes de l'agent | Bonne date ; fuite de notes internes et refus |
+| v2 : « ni accepter ni refuser » | Plus de refus ; la fuite persiste |
+| v3 : faits seulement dans le contexte | Plus de fuite |
+| v4 : langue de l'e-mail, prudence élargie | Sur-correction : la date disparaît |
+| v5 : consigne positive pour les faits | Correct ; « comme convenu » persiste |
 
-Aucun indice seul ne suffit. Le refus par mots-clés corrige un cas (« un étudiant connu vend son
-vélo ») mais en casse trois (messages courts sans mot-clé) : seule une lecture du sens les distingue.
+Enseignements : un petit modèle suit mieux une **consigne positive** ou une **phrase modèle** qu'une
+interdiction ; il ne fait pas de déduction sur le contexte ; une même configuration peut donner une
+réponse correcte puis une invention, d'où les 3 essais par e-mail.
 
-Sur la boîte de réception du sujet, les 6 scénarios sont traités correctement ; l'e-mail 005
-(« Stage et SuperMAS », d'un collègue) est détecté comme ambigu (0,78 contre 0,76) et départagé par
-le LLM. Avec la mémoire persistante, un nouvel e-mail dans un fil déjà traité est renforcé par
-l'affinité de fil (e-mail 001 : 0,97 → 0,98).
+### Lancer les expériences
 
-### Génération (e-mail SuperMAS d'Anna, `qwen3.5:4b`, processeur sans GPU dédié)
+```powershell
+# agent unique / multi-agent / sans contexte / avec critique (environ 3 à 4 heures)
+.\mvnw.cmd test "-Dtest=SingleVsMultiAgentExperimentTest" "-Dexperiences=true" "-Druns=3"
+# options : "-Dconfigs=multi,critique" "-Demails=n15,004" "-Druns=1" "-Dtimeout=300"
+```
 
-| Version du prompt | Effet observé |
-|---|---|
-| v0 : aucune consigne | Plusieurs modèles de réponse, heure inventée (« 17h00 ») |
-| v1 : règles communes + consignes de l'agent | Bonne date avec contexte ; mais fuite de notes internes et refus |
-| v2 : « ni accepter ni refuser », « notes internes » | Plus de refus ; la fuite persiste |
-| v3 : faits seulement dans le contexte | Plus de fuite ; réponse neutre sur l'engagement |
-| v4 : langue### Agents étudiant, collègues, administration (e-mails 002 à 004, avec contexte)
-
-| E-mail | Premier essai | Problème | Correction | Résultat |
-|---|---|---|---|---|
-| 002 (TP3) | Correct : code + rapport de 4 pages, Moodle | — | — | Correct |
-| 003 (jury) | « Je ne peux pas confirmer » malgré un jeudi après-midi libre | Règle « pas de nouvelle charge » généralisée à la réunion ; « 14h = après-midi » non déduit | Consigne positive sur les créneaux ; disponibilités écrites heure par heure | Créneau accepté, copies traitées |
-| 004 (mission) | Références et pièces manquantes exactes, mais « pièces en règle » inventé | Puis « ci-joint le formulaire signé » : la consigne de l'agent parlait de « pièces jointes » | Consigne réécrite avec une phrase modèle ; règle commune « n'affirme jamais avoir joint ou signé » | Pièces annoncées au futur |
-
-Enseignements : un petit modèle ne fait pas de déduction sur le contexte. Il faut écrire les faits sous
-la forme exacte utile (« libre à 14h »), et une phrase modèle est mieux suivie qu'une interdiction.
-Une même configuration peut donner une réponse correcte puis une invention : chaque cas est évalué sur
-plusieurs essais. de l'e-mail, prudence élargie | 005 en français ; mais sur-correction : la date disparaît pour 001 |
-| v5 : consigne positive pour les faits, prudence limitée aux engagements | 001 correct ; 005 reprend encore une proposition de l'expéditeur (« comme convenu ») |
-
-Temps : de 8 s (prompt minimal) à 35-50 s (contexte complet, ou départage par LLM). Un contexte
-sobre réduit sensiblement le temps de réponse.
-
-Enseignements : un petit modèle local applique mal les consignes conditionnelles et généralise trop
-les consignes de prudence. Le prompt réduit les erreurs sans les supprimer : la **validation
-humaine** et la **révision avec commentaire** restent indispensables, et l'interface les rend simples.
+Résultats dans `target/experiences-mono-multi-qwen3.5_4b.md` (synthèse, détail par e-mail, toutes
+les propositions pour la relecture). Le jeu de test et les attendus sont dans
+`src/test/resources/experiences/`.
 
 ---
 
-## 9. Tests
+## 10. Tests
 
-123 tests (JUnit 5) : contrats communs, bus et agents, stratégies et scénarios de routing, service
-(cycle submit / revise / reroute / accept), client Ollama, repositories JSON (agents, contacts,
-boîte de réception), mémoire persistante, contexte, génération du prompt, et un test de bout en bout
-de la vraie configuration avec un faux LLM (`MailAssistantTest`).
+161 tests (JUnit 5) : contrats communs, bus et agents, stratégies et scénarios de routing, service
+(submit / revise / reroute / accept, relecture), client Ollama, repositories JSON, lecteur `.eml`,
+mémoire persistante, contexte, prompt et langue imposée, agent critique (seul et dans le système),
+réputation, grille d'évaluation des expériences, et un test de bout en bout de la vraie
+configuration avec un faux LLM.
 
-## 10. Organisation Git
+## 11. Organisation Git
 
 - `main` est protégée : toute modification passe par une Pull Request relue par l'autre membre.
 - Une branche par fonctionnalité (`feature/...`), fusionnée dès qu'elle est terminée et testée.
 - Les fichiers communs (`model/`, interfaces, `MailAssistant`, `pom.xml`, `README.md`) ne sont
   modifiés qu'après accord.
-- `data/` (historique des conversations) n'est jamais commité.
+- `data/` (e-mails ajoutés, historique, réputation) n'est jamais commité.
 
-## 11. Prochaines étapes
+## 12. Prochaines étapes
 
-- **Sources d'e-mails** : une interface `MailSource` avec plusieurs implémentations — formulaire
-  « Nouvel e-mail » dans l'interface, import de fichiers `.eml` (fils reconstitués avec
-  `In-Reply-To` / `References`, `List-Id` pour la stratégie « métadonnées »), et éventuellement IMAP
-  en lecture seule.
-- Documents de contexte (faits) pour les agents `student`, `teacher` et `administration`.
-- Évaluation systématique des réponses sur les 6 e-mails (3 essais chacun) : langue, faits,
-  inventions, engagements, fuites, temps.
-- Expériences : auto-évaluation des agents par le LLM, comparaison avec un modèle plus grand
+- Routing : mieux reconnaître les collègues absents de l'annuaire ; ne pas laisser les mots d'un
+  expéditeur inconnu suffire à choisir un agent sensible.
+- Agent critique : vérification des faits par le LLM (année, disponibilité) en plus des règles.
+- Envoi automatique encadré par la réputation, l'absence d'ambiguïté et de remarque du critique.
+- Recherche de contexte par embeddings locaux ; comparaison avec un modèle plus grand (`qwen3.5:9b`).ec un modèle plus grand
   (`qwen3.5:9b`), RAG par embeddings locaux.Gestion des agents et des contacts depuis l'interface.
 - Expériences : auto-évaluation des agents par le LLM, comparaison avec un modèle plus grand
   (`qwen3.5:9b`), RAG par embeddings locaux.                          |

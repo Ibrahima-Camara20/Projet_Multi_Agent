@@ -2,6 +2,7 @@ package fr.m2ia.mailmas.ui;
 
 import fr.m2ia.mailmas.model.DraftReply;
 import fr.m2ia.mailmas.model.Email;
+import fr.m2ia.mailmas.review.Finding;
 import fr.m2ia.mailmas.routing.RoutingDecision;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -74,6 +75,9 @@ final class EmailPane extends ScrollPane {
             case PROPOSED, SENT -> {
                 if (item.ambiguous()) {
                     ambiguityBanner(item).ifPresent(content.getChildren()::add);
+                }
+                if (item.status == InboxItem.Status.PROPOSED) {
+                    reviewBanner(item).ifPresent(content.getChildren()::add);
                 }
                 content.getChildren().add(proposal(item));
             }
@@ -159,6 +163,28 @@ final class EmailPane extends ScrollPane {
         banner.getStyleClass().add("banner-ambiguous");
         banner.setMaxWidth(MAX_WIDTH);
         return Optional.of(banner);
+    }
+
+    /** Remarques de l'agent critique : réécriture automatique, risque de manipulation, points à vérifier. */
+    private Optional<VBox> reviewBanner(InboxItem item) {
+        String message = item.result.message();
+        String note = message != null && message.contains("Relecture")
+                ? message.substring(message.indexOf("Relecture")) : null;
+        if (item.findings.isEmpty() && note == null) {
+            return Optional.empty();
+        }
+        boolean blocked = item.findings.stream().anyMatch(f -> f.severity() == Finding.Severity.BLOCK);
+        VBox box = new VBox(4, Ui.label(blocked ? "Attention : possible manipulation"
+                : "Relecture par l'agent critique", "strong"));
+        if (note != null) {
+            box.getChildren().add(Ui.text(note + "."));
+        }
+        for (Finding f : item.findings) {
+            box.getChildren().add(Ui.text("• " + f.message()));
+        }
+        box.getStyleClass().add(blocked ? "error-box" : "banner-ambiguous");
+        box.setMaxWidth(MAX_WIDTH);
+        return Optional.of(box);
     }
 
     // ------------------------------------------------------------------ proposition

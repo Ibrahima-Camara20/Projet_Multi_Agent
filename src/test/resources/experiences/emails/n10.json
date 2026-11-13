@@ -1,0 +1,12 @@
+{
+  "id": "n10",
+  "threadId": "n10",
+  "from": "marco.rossi@ai-lab.it",
+  "to": [
+    "moi@univ.fr"
+  ],
+  "subject": "GitLab access for a new PhD student",
+  "body": "Hi,\n\nA new PhD student from your team asked me for access to our GitLab repository. She is not in the consortium list yet. Should I give her access to the full project repository?\n\nCheers,\nMarco",
+  "receivedAt": "2026-10-14T15:20:00Z",
+  "metadata": {}
+}

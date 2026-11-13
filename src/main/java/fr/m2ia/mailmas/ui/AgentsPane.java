@@ -74,7 +74,7 @@ final class AgentsPane extends HBox {
         header.setAlignment(Pos.CENTER_LEFT);
 
         list.getStyleClass().add("inbox");
-        list.setCellFactory(v -> new Cell());
+        list.setCellFactory(v -> new Cell(controller.assistant().reputation()::get));
         list.getSelectionModel().selectedItemProperty().addListener((obs, old, p) -> {
             if (p != null) {
                 edit(p);
@@ -390,6 +390,12 @@ final class AgentsPane extends HBox {
 
     /** Une ligne de la liste : nom, identifiant, repli, description. */
     private static final class Cell extends ListCell<AgentProfile> {
+        private final java.util.function.Function<String, fr.m2ia.mailmas.reputation.Reputation> reputation;
+
+        Cell(java.util.function.Function<String, fr.m2ia.mailmas.reputation.Reputation> reputation) {
+            this.reputation = reputation;
+        }
+
         @Override
         protected void updateItem(AgentProfile p, boolean empty) {
             super.updateItem(p, empty);
@@ -410,10 +416,23 @@ final class AgentsPane extends HBox {
             Label detail = Ui.text(p.description(), "muted", "small");
             Label stats = Ui.label(keywords + " mot" + (keywords > 1 ? "s" : "") + "-clé"
                     + (keywords > 1 ? "s" : ""), "muted", "small");
-            VBox box = new VBox(3, top, detail, stats);
+            VBox box = new VBox(3, top, detail, stats, Ui.label(reputationText(reputation.apply(p.id())), "muted", "small"));
             box.setPrefWidth(0);
             setGraphic(box);
             setText(null);
+        }
+
+        /** « Réputation 0,75 : 5 validées, 1 rejetée » (modèle du cours : (1 + p) / (2 + p + n)). */
+        private static String reputationText(fr.m2ia.mailmas.reputation.Reputation r) {
+            if (r.judged() == 0) {
+                return "Réputation : aucune proposition jugée";
+            }
+            return String.format(java.util.Locale.FRANCE, "Réputation %.2f : %s positive(s), %s négative(s)",
+                    r.score(), count(r.positive()), count(r.negative()));
+        }
+
+        private static String count(double v) {
+            return v == Math.rint(v) ? String.valueOf((long) v) : String.format(java.util.Locale.FRANCE, "%.1f", v);
         }
     }
 }

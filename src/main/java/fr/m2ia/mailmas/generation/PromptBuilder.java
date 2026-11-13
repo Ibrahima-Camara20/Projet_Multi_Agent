@@ -9,6 +9,7 @@ import fr.m2ia.mailmas.model.ConversationEntry;
 import fr.m2ia.mailmas.model.ConversationEntry.Kind;
 import fr.m2ia.mailmas.model.Email;
 import fr.m2ia.mailmas.model.UserFeedback;
+import fr.m2ia.mailmas.review.TextChecks;
 import fr.m2ia.mailmas.model.UserFeedback.Decision;
 
 import java.util.List;
@@ -82,6 +83,7 @@ public class PromptBuilder {
             appendRevision(sb, history, feedback);
         }
 
+        sb.append('\n').append(languageInstruction(email)).append('\n');
         sb.append("\nRédige maintenant la réponse.");
         return sb.toString();
     }
@@ -126,6 +128,18 @@ public class PromptBuilder {
             comments.forEach(c -> sb.append("- ").append(c.strip()).append('\n'));
             sb.append("Tiens compte de toutes ces remarques dans ta nouvelle proposition.\n");
         }
+    }
+
+    /**
+     * Langue imposée, détectée dans l'e-mail et rappelée juste avant la rédaction : nos expériences
+     * montrent qu'avec un contexte long en français, le modèle répond en français à un e-mail
+     * anglais malgré la règle générale « réponds dans la langue de l'e-mail ».
+     */
+    static String languageInstruction(Email email) {
+        return TextChecks.language(email.subject() + "\n" + email.body()).equals("en")
+                ? "Langue de l'e-mail : anglais. Rédige toute la réponse en anglais (Write the whole reply in "
+                        + "English), même si le contexte est en français."
+                : "Langue de l'e-mail : français. Rédige toute la réponse en français.";
     }
 
     /**
